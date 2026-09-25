@@ -1,0 +1,2893 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PictoBlox HOTS Debugger - KKA SD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&family=Source+Code+Pro:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Nunito', sans-serif;
+      touch-action: manipulation;
+    }
+    .font-brand {
+      font-family: 'Fredoka', cursive, sans-serif;
+    }
+    .font-code {
+      font-family: 'Source Code Pro', monospace;
+    }
+    .dot-grid {
+      background-color: #F8FAFD;
+      background-image: radial-gradient(#CBD5E1 1.6px, transparent 1.6px);
+      background-size: 18px 18px;
+    }
+    .block-text {
+      fill: #FFFFFF;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 11.5px;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .block-text-dark {
+      fill: #573A00;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 11.5px;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .draggable-block {
+      touch-action: none;
+      user-select: none;
+      transition: filter 0.15s ease, transform 0.1s ease;
+    }
+    .draggable-block:hover {
+      filter: brightness(1.08) drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+    }
+    .drop-zone-highlight {
+      filter: drop-shadow(0 0 8px #38BDF8) !important;
+      stroke: #0284C7 !important;
+      stroke-width: 2.5px !important;
+    }
+    .palette-trash-active {
+      background-color: #FEE2E2 !important;
+      border-color: #EF4444 !important;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3) !important;
+    }
+    .tap-selected-block {
+      outline: 3px solid #38BDF8 !important;
+      outline-offset: 2px;
+      animation: pulseBorder 1.2s infinite ease-in-out;
+    }
+    @keyframes pulseBorder {
+      0%, 100% { outline-color: #38BDF8; transform: scale(1); }
+      50% { outline-color: #0284C7; transform: scale(1.02); }
+    }
+    @keyframes pulseHint {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .hint-alert-glow {
+      animation: pulseHint 1s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col select-none">
+
+  <!-- MODAL: REGISTRASI NAMA SISWA SEBELUM MEMULAI -->
+  <div id="startExamModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-indigo-500 max-w-md w-full rounded-3xl p-6 sm:p-7 text-center shadow-2xl relative">
+      <div class="w-16 h-16 bg-amber-400/20 text-amber-300 border-2 border-amber-400 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">
+        🤖
+      </div>
+      <h2 class="text-xl sm:text-2xl font-brand font-bold text-white mb-1">STS KODING & AI</h2>
+      <p class="text-xs text-slate-300 mb-5 leading-relaxed">
+        Selamat datang! Masukkan nama dan kelasmu sebelum memulai misi pemecahan masalah (debugging) pemrograman PictoBlox.
+      </p>
+
+      <form id="studentRegistrationForm" onsubmit="handleStartExam(event)" class="space-y-3.5 text-left">
+        <div>
+          <label class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-1">Nama Lengkap Siswa</label>
+          <input id="inputStudentName" type="text" required placeholder="Contoh: Ahmad Raihan" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-1">Kelas & No. Absen</label>
+          <input id="inputStudentClass" type="text" required placeholder="Contoh: 5A / Absen 12" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" />
+        </div>
+
+        <div class="bg-indigo-950/40 border border-indigo-500/30 p-3 rounded-xl text-[11px] text-indigo-200 space-y-1 mt-2">
+          <div class="flex items-center gap-1.5 font-bold text-amber-300">
+            <span>⏱️</span> <span>Ketentuan Ujian & Waktu:</span>
+          </div>
+          <p>• Waktu ujian total adalah <strong>60 Menit</strong>.</p>
+          <p>• Setiap <strong>10 Menit</strong>, petunjuk tambahan (hint) untuk tiap soal akan terbuka secara bertahap.</p>
+          <p>• Jika waktu habis, jawabanmu akan <strong>otomatis tersimpan</strong> ke Spreadsheet Guru.</p>
+        </div>
+
+        <button type="submit" class="w-full mt-2 py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-amber-500 hover:from-indigo-500 hover:to-amber-400 active:scale-[0.98] text-white font-brand font-bold text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer shadow-indigo-500/25">
+          <span>Mulai Kerjakan Ujian Sekarang</span>
+          <span>🚀</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- HEADER & NAVBAR UTAMA -->
+  <header class="bg-slate-800/95 border-b border-slate-700/80 sticky top-0 z-30 backdrop-blur-md px-3 sm:px-6 py-2.5 shadow-md">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
+      <!-- Title & Student Profile Tag -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="bg-amber-400 text-amber-950 p-1.5 sm:p-2 rounded-xl text-lg sm:text-xl font-bold shadow-inner">
+          🤖
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-amber-400 tracking-wider uppercase font-brand">KKA SD Kelas 5–6</span>
+            <span id="headerStudentBadge" class="text-[10px] bg-emerald-500/20 text-emerald-300 font-extrabold px-2 py-0.5 rounded-full border border-emerald-400/30 hidden">
+              👤 <span id="headerStudentName">Siswa</span>
+            </span>
+          </div>
+          <h1 class="text-sm sm:text-base font-brand font-bold text-white tracking-wide">STS KODING & AI</h1>
+        </div>
+      </div>
+
+      <!-- TIMER 60 MENIT & BUTTON HINT BERJENJANG -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- 60-Minute Countdown Clock -->
+        <div id="examTimerContainer" class="bg-slate-950/80 border border-amber-500/50 px-2.5 sm:px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-inner">
+          <span class="text-xs">⏱️</span>
+          <div class="flex flex-col">
+            <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Sisa Waktu</span>
+            <span id="examTimerDisplay" class="font-mono text-xs sm:text-sm font-black text-amber-400 tracking-wider">60:00</span>
+          </div>
+        </div>
+
+        <!-- Hint Button (Opens Modal) -->
+        <button id="btnOpenHintModal" onclick="openHintModal()" class="bg-indigo-600/90 hover:bg-indigo-600 active:scale-95 text-white text-xs font-bold px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 border border-indigo-400/40 shadow transition">
+          <span class="text-sm">💡</span>
+          <span class="hidden sm:inline">Bantuan (Hint)</span>
+          <span id="unlockedHintsBadge" class="bg-amber-400 text-amber-950 text-[10px] px-1.5 py-0.2 rounded-full font-black">0/5</span>
+        </button>
+      </div>
+
+      <!-- Question Tabs (1 to 5) -->
+      <div class="flex items-center gap-1.5 bg-slate-950/60 p-1 rounded-xl border border-white/10 text-xs overflow-x-auto w-full md:w-auto justify-start md:justify-end">
+        <button id="tabQ1" onclick="switchQuestion(0)" class="px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 bg-indigo-600 text-white shadow">
+          <span>Soal 1</span>
+          <span id="badgeCheckQ1" class="text-[10px] hidden">✅</span>
+        </button>
+        <button id="tabQ2" onclick="switchQuestion(1)" class="px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 text-slate-400 hover:text-white">
+          <span>Soal 2</span>
+          <span id="badgeCheckQ2" class="text-[10px] hidden">✅</span>
+        </button>
+        <button id="tabQ3" onclick="switchQuestion(2)" class="px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 text-slate-400 hover:text-white">
+          <span>Soal 3</span>
+          <span id="badgeCheckQ3" class="text-[10px] hidden">✅</span>
+        </button>
+        <button id="tabQ4" onclick="switchQuestion(3)" class="px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 text-slate-400 hover:text-white">
+          <span>Soal 4</span>
+          <span id="badgeCheckQ4" class="text-[10px] hidden">✅</span>
+        </button>
+        <button id="tabQ5" onclick="switchQuestion(4)" class="px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 text-slate-400 hover:text-white">
+          <span>Soal 5</span>
+          <span id="badgeCheckQ5" class="text-[10px] hidden">✅</span>
+        </button>
+      </div>
+
+      <!-- Quick Action Controls (Green Flag & Stop) -->
+      <div class="flex items-center gap-2">
+        <button id="greenFlagBtn" onclick="togglePlaySimulation()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition">
+          <span class="text-base">🚩</span>
+          <span class="hidden sm:inline">Uji Jalankan</span>
+        </button>
+        <button id="stopSignBtn" onclick="stopSimulation()" class="bg-rose-500 hover:bg-rose-600 active:scale-95 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition">
+          <span class="text-base">🛑</span>
+          <span class="hidden sm:inline">Hentikan</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- STUDY CASE HEADER PANEL -->
+  <section class="bg-slate-800 border-b border-slate-700 px-3 sm:px-6 py-3">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-2.5">
+      <div class="flex-1 w-full">
+        <div class="flex items-center gap-2 mb-2 flex-wrap">
+          <span id="caseIcon" class="text-lg">🌟</span>
+          <h2 id="caseTitleBadge" class="text-sm font-brand font-bold text-amber-300">Studi Kasus 1: Permainan Toby Tiba-Tiba Macet (Instant Freeze)</h2>
+        </div>
+        <div id="caseDescription" class="text-xs sm:text-[13px] text-slate-200 leading-relaxed max-w-5xl bg-slate-900/60 p-3 rounded-xl border border-slate-700/70">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN WORKSPACE: 3 KOLOM RESPONSIVE -->
+  <main class="max-w-7xl mx-auto w-full p-2.5 sm:p-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+    
+    <!-- Kolom 1: Toolbox / Palet Balok (4 cols on lg) -->
+    <div class="lg:col-span-4 bg-slate-800 rounded-2xl border border-slate-700 p-3 flex flex-col shadow-lg">
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-700">
+        <div class="flex items-center gap-1.5">
+          <span class="text-sm">🧰</span>
+          <span class="text-xs font-brand font-bold uppercase tracking-wider text-slate-200">Kotak Balok (Toolbox)</span>
+        </div>
+        <span class="text-[10px] text-slate-400 bg-slate-700/60 px-2 py-0.5 rounded">Tarik / Ketuk Balok</span>
+      </div>
+
+      <!-- Delete Drop Target Notice -->
+      <div id="paletteTrashDropZone" class="mb-2 p-2 rounded-xl border border-dashed border-rose-500/40 bg-rose-950/20 text-center transition-all">
+        <span class="text-[11px] text-rose-300 font-bold flex items-center justify-center gap-1">
+          <span>🗑️</span>
+          <span>Seret balok ke sini untuk mencopot / menghapusnya</span>
+        </span>
+      </div>
+
+      <!-- Palette Blocks List -->
+      <div id="paletteBlocksContainer" class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[380px] lg:max-h-[520px]">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Tap Mode Guide -->
+      <div class="mt-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700 text-[11px] text-slate-400 flex items-center gap-2">
+        <span class="text-base shrink-0">📱</span>
+        <span><strong>Tips HP/Tablet:</strong> Ketuk balok di atas, lalu ketuk slot target di lembar kode untuk memasang.</span>
+      </div>
+    </div>
+
+    <!-- Kolom 2: Workspace SVG Canvas (5 cols on lg) -->
+    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-300 shadow-xl flex flex-col overflow-hidden">
+      <div class="bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center justify-between text-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-brand font-bold uppercase text-slate-700">Lembar Kode:</span>
+          <span id="workspaceQuestionLabel" class="text-xs font-mono font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">Soal 1</span>
+        </div>
+        <div id="evalBadge" class="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">
+          Kode Belum Lengkap / Error ❌
+        </div>
+      </div>
+
+      <!-- Workspace Canvas with PictoBlox Dot Grid -->
+      <div id="scriptWorkspaceArea" class="flex-1 dot-grid p-4 overflow-auto min-h-[440px] relative">
+        <div id="codeScriptSvgContainer" class="w-full flex justify-center">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="absolute bottom-3 right-3 flex flex-col gap-1 bg-white/90 p-1 rounded-xl shadow-md border border-slate-300 text-slate-700 text-xs font-bold">
+          <button onclick="adjustZoom(0.1)" class="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded">+</button>
+          <button onclick="resetZoom()" class="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-[10px]">=</button>
+          <button onclick="adjustZoom(-0.1)" class="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded">-</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kolom 3: Stage & Reflection (3 cols on lg) -->
+    <div class="lg:col-span-3 flex flex-col gap-3">
+      
+      <!-- Stage Box -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-3 shadow-lg flex flex-col">
+        <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700 text-xs font-brand font-bold text-slate-200">
+          <span class="flex items-center gap-1"><span>🎮</span> <span>Stage PictoBlox</span></span>
+          <span id="stageTargetSubtext" class="text-[10px] font-mono text-amber-300">Toby vs Star & Bomb</span>
+        </div>
+
+        <!-- Live Watchers -->
+        <div class="flex items-center gap-1.5 mb-2 flex-wrap" id="stageWatcherContainer">
+          <div id="watcherScore" class="bg-amber-100 border border-amber-400 text-amber-950 text-xs px-2 py-0.5 rounded font-black flex items-center gap-1 shadow-sm">
+            <span>⭐ score:</span>
+            <span id="scoreVal" class="bg-white px-1.5 rounded text-amber-900 font-mono">0</span>
+          </div>
+          <div id="watcherXPos" class="bg-sky-100 border border-sky-400 text-sky-950 text-xs px-2 py-0.5 rounded font-black flex items-center gap-1 shadow-sm hidden">
+            <span id="watcherXPosLabel">📍 pos x:</span>
+            <span id="xPosVal" class="bg-white px-1.5 rounded text-sky-900 font-mono">0</span>
+          </div>
+          <div id="watcherYPos" class="bg-indigo-100 border border-indigo-400 text-indigo-950 text-xs px-2 py-0.5 rounded font-black flex items-center gap-1 shadow-sm hidden">
+            <span>📍 pos y:</span>
+            <span id="yPosVal" class="bg-white px-1.5 rounded text-indigo-900 font-mono">0</span>
+          </div>
+          <div id="watcherCarLoop" class="bg-emerald-100 border border-emerald-400 text-emerald-950 text-xs px-2 py-0.5 rounded font-black flex items-center gap-1 shadow-sm hidden">
+            <span>🔄 Loop:</span>
+            <span id="carLoopVal" class="bg-white px-1.5 rounded text-emerald-900 font-mono">0</span>
+          </div>
+          <div id="watcherBearStatus" class="bg-lime-100 border border-lime-400 text-lime-950 text-xs px-2 py-0.5 rounded font-black flex items-center gap-1 shadow-sm hidden">
+            <span>🐻 Status:</span>
+            <span id="bearStatusVal" class="bg-white px-1.5 rounded text-lime-900 font-mono">Di Awal</span>
+          </div>
+        </div>
+
+        <!-- Canvas Frame -->
+        <div class="relative w-full aspect-[4/3] bg-slate-950 rounded-xl overflow-hidden border border-slate-600 shadow-inner">
+          <canvas id="gameCanvas" width="360" height="270" class="w-full h-full block"></canvas>
+          <div id="stageToast" class="absolute top-2 inset-x-2 bg-slate-900/90 text-amber-300 text-[11px] font-bold py-1 px-2.5 rounded-lg border border-amber-500/40 text-center opacity-0 transition-opacity duration-300 pointer-events-none">
+            Game Berjalan!
+          </div>
+        </div>
+
+        <!-- Touch Move Controls (Left-Right for Q2 & Q3) -->
+        <div class="hidden flex justify-center items-center gap-2 mt-2" id="stageTouchButtons">
+          <button id="btnTouchLeft" class="touch-none select-none w-28 bg-indigo-700 hover:bg-indigo-600 active:bg-amber-500 text-white font-extrabold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow active:scale-95">
+            <span>◀</span> <span>Kiri</span>
+          </button>
+          <button id="btnTouchRight" class="touch-none select-none w-28 bg-indigo-700 hover:bg-indigo-600 active:bg-amber-500 text-white font-extrabold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow active:scale-95">
+            <span>Kanan</span> <span>▶</span>
+          </button>
+        </div>
+
+        <!-- D-Pad Controls for Soal 1 (Zilong 4-Way Motion) -->
+        <div class="flex flex-col items-center gap-1.5 mt-2" id="stageDPadButtons">
+          <button id="btnDPadUp" class="touch-none select-none w-28 bg-indigo-700 hover:bg-indigo-600 active:bg-amber-500 text-white font-extrabold py-2 rounded-xl text-xs shadow active:scale-95 flex items-center justify-center gap-1">
+            ▲ Atas
+          </button>
+          <div class="flex items-center gap-2">
+            <button id="btnDPadLeft" class="touch-none select-none w-24 bg-indigo-700 hover:bg-indigo-600 active:bg-amber-500 text-white font-extrabold py-2 rounded-xl text-xs shadow active:scale-95 flex items-center justify-center gap-1">
+              ◀ Kiri
+            </button>
+            <button id="btnDPadDown" class="touch-none select-none w-24 bg-indigo-700 hover:bg-indigo-600 active:bg-amber-500 text-white font-extrabold py-2 rounded-xl text-xs shadow active:scale-95 flex items-center justify-center gap-1">
+              ▼ Bawah
+            </button>
+            <button id="btnDPadRight" class="touch-none select-none w-24 bg-indigo-700 hover:bg-indigo-600 active:bg-amber-500 text-white font-extrabold py-2 rounded-xl text-xs shadow active:scale-95 flex items-center justify-center gap-1">
+              Kanan ▶
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL REFLEKSI ANALISIS SISWA -->
+      <div id="reflectionPanelContainer" class="bg-slate-800 rounded-2xl border border-slate-700 p-3 shadow-lg flex flex-col flex-1">
+        <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700">
+          <div class="flex items-center gap-1">
+            <span id="panelStateIcon">🔒</span>
+            <h3 class="text-xs font-brand font-bold text-slate-200">Refleksi Analisis (<span id="reflectionQuestionLabel">Soal 1</span>)</h3>
+          </div>
+          <span class="text-[10px] text-amber-300 font-mono">Min. 20 Kata</span>
+        </div>
+
+        <p class="text-[11px] text-slate-400 leading-tight mb-2">
+          Jelaskan proses koding & debugging: konsep apa yang kamu gunakan dan bagaimana susunan kode yang benar?
+        </p>
+
+        <textarea id="studentExplanationInput" disabled rows="3" class="w-full text-xs p-2 rounded-xl bg-slate-900/80 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60 disabled:cursor-not-allowed resize-none" placeholder="🔒 Perbaiki/susun balok kode terlebih dahulu untuk membuka lembar analisis ini..."></textarea>
+
+        <div class="flex items-center justify-between mt-1 text-[11px]">
+          <span>Jumlah kata: <strong id="wordCounter" class="text-rose-400 font-mono">0</strong>/20</span>
+          <span id="wordStatusNotice" class="text-rose-400 text-[10px] hidden">Kurang <span id="wordShortage">20</span> kata</span>
+          <span id="wordSuccessNotice" class="text-emerald-400 text-[10px] hidden font-bold">Refleksi Memenuhi Syarat! ✅</span>
+        </div>
+
+        <!-- Next Challenge / Submit Button -->
+        <button id="btn-next-challenge" disabled onclick="handleNextChallengeAction()" class="mt-2.5 w-full py-2 bg-slate-700 text-slate-400 font-brand font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 cursor-not-allowed">
+          <span id="nextBtnLabel">Lanjut ke Soal Berikutnya (Soal 2)</span>
+          <span>→</span>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL: BANTUAN (HINTS) BERJENJANG WAKTU -->
+  <div id="hintsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-indigo-500/50 max-w-lg w-full rounded-3xl p-5 sm:p-6 shadow-2xl relative text-slate-100">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">💡</span>
+          <h3 class="font-brand font-bold text-amber-300 text-base">Kotak Bantuan Detektif Cilik</h3>
+        </div>
+        <button onclick="closeHintModal()" class="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white font-bold text-sm">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-300 my-3 leading-relaxed">
+        Setiap 10 menit, bantuan baru akan otomatis terbuka untuk memandu analisismu tanpa membocorkan jawaban langsung.
+      </p>
+
+      <!-- Hints List Container -->
+      <div id="hintsContainerList" class="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <button onclick="closeHintModal()" class="w-full mt-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-brand font-bold text-xs rounded-xl shadow transition">
+        Mengerti, Kembali ke Soal
+      </button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT: SOUND ENGINE & AUDIO -->
+  <script>
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.15) {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+      playSnap() {
+        this.playTone(850, 'triangle', 0.08, 0.2);
+      }
+      playGrab() {
+        this.playTone(480, 'sine', 0.06, 0.12);
+      }
+      playError() {
+        this.playTone(180, 'sawtooth', 0.25, 0.2);
+      }
+      playStar() {
+        this.playTone(980, 'sine', 0.12, 0.25);
+        setTimeout(() => this.playTone(1320, 'sine', 0.18, 0.2), 60);
+      }
+      playBomb() {
+        this.playTone(120, 'square', 0.4, 0.3);
+      }
+      playVictory() {
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          setTimeout(() => this.playTone(freq, 'triangle', 0.2, 0.25), idx * 90);
+        });
+      }
+      playSolveChime() {
+        [440, 554.37, 659.25, 880, 1108.73].forEach((freq, idx) => {
+          setTimeout(() => this.playTone(freq, 'triangle', 0.15, 0.2), idx * 75);
+        });
+      }
+    }
+    const audio = new SoundEngine();
+
+    function triggerHaptic(duration = 40) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(duration); } catch(e) {}
+      }
+    }
+  </script>
+
+  <!-- JAVASCRIPT: DATA SOAL 1-5 & VALIDASI -->
+  <script>
+    const QUESTIONS_DATA = [
+      {
+        id: 0,
+        name: "Soal 1",
+        icon: "⚔️",
+        title: "Studi Kasus 1: Kontrol Penuh 4 Arah Karakter Zilong (Land of Dawn)",
+        description: `
+          <div class="space-y-1.5">
+            <p>Toby sedang memprogram sistem kendali untuk karakter ksatria <strong>Zilong</strong> agar bisa bergerak bebas menjelajahi arena pertempuran Land of Dawn.</p>
+            <div>
+              <p class="font-bold text-amber-300">Aturan kendali 4 arah:</p>
+              <ul class="list-disc list-inside ml-1 text-slate-300 space-y-0.5">
+                <li>Panah Kanan (Right): Zilong bergerak ke arah kanan.</li>
+                <li>Panah Kiri (Left): Zilong bergerak ke arah kiri.</li>
+                <li>Panah Atas (Up): Zilong bergerak ke arah atas.</li>
+                <li>Panah Bawah (Down): Zilong bergerak ke arah bawah.</li>
+              </ul>
+            </div>
+            <p class="text-rose-300 font-semibold">Namun, lembar kode kendali Zilong saat ini masih kosong sehingga Zilong tidak dapat bergerak.</p>
+            <div>
+              <p class="font-bold text-sky-300">Tugas:</p>
+              <p class="text-slate-300">Lengkapilah 4 sarang percabangan dengan kondisi tombol panah dan aksi gerak yang tepat. Waspadai balok-balok jebakan yang arah geraknya keliru atau tertukar!</p>
+            </div>
+          </div>
+        `,
+        subtext: "Land of Dawn: Zilong Savage 4-Way",
+        mode: "zilong_control",
+        reflectionPrompt: "Jelaskan: 1) Bagaimana caramu menentukan balok yang tepat untuk setiap arah gerak Zilong? 2) Mengapa kita harus menggunakan balok 'change' dan bukan 'set' untuk membuat karakter bisa terus melangkah? (minimal 20 kata)",
+        hint: "Zilong memiliki 4 arah pergerakan. Ingat: bergerak mendatar menggunakan perubahan X (+10 kanan, -10 kiri) dan bergerak naik-turun menggunakan perubahan Y (+10 atas, -10 bawah). Jangan gunakan balok 'set' agar karakter tidak terpaku diam!",
+        initialSlots: {
+          q5_cond1: "empty", q5_body1: "empty",
+          q5_cond2: "empty", q5_body2: "empty",
+          q5_cond3: "empty", q5_body3: "empty",
+          q5_cond4: "empty", q5_body4: "empty"
+        },
+        palette: [
+          { id: "change_y_minus_10", type: "stack", label: "change y by (-10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "key_right_arrow", type: "sensing", label: "key [right arrow ▼] pressed?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "trap_set_y_minus_10", type: "stack", label: "set y to (-10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "change_x_plus_10", type: "stack", label: "change x by (10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "trap_set_x_10", type: "stack", label: "set x to (10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "key_down_arrow", type: "sensing", label: "key [down arrow ▼] pressed?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "trap_key_space", type: "sensing", label: "key [space ▼] pressed?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "change_y_plus_10", type: "stack", label: "change y by (10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "key_left_arrow", type: "sensing", label: "key [left arrow ▼] pressed?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "trap_set_y_10", type: "stack", label: "set y to (10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "change_x_minus_10", type: "stack", label: "change x by (-10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "key_up_arrow", type: "sensing", label: "key [up arrow ▼] pressed?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "trap_move_10", type: "stack", label: "move (10) steps", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "trap_set_x_minus_10", type: "stack", label: "set x to (-10)", color: "#4C97FF", stroke: "#3373CC" }
+        ],
+        validator: (slots) => {
+          const pairs = [
+            { c: slots.q5_cond1, b: slots.q5_body1 },
+            { c: slots.q5_cond2, b: slots.q5_body2 },
+            { c: slots.q5_cond3, b: slots.q5_body3 },
+            { c: slots.q5_cond4, b: slots.q5_body4 }
+          ];
+          const hasRight = pairs.some(p => p.c === 'key_right_arrow' && p.b === 'change_x_plus_10');
+          const hasLeft = pairs.some(p => p.c === 'key_left_arrow' && p.b === 'change_x_minus_10');
+          const hasUp = pairs.some(p => p.c === 'key_up_arrow' && p.b === 'change_y_plus_10');
+          const hasDown = pairs.some(p => p.c === 'key_down_arrow' && p.b === 'change_y_minus_10');
+          return hasRight && hasLeft && hasUp && hasDown;
+        }
+      },
+      {
+        id: 1,
+        name: "Soal 2",
+        icon: "🌟",
+        title: "Studi Kasus 2: Permainan Toby Tiba-Tiba Macet (Instant Freeze)",
+        description: `
+          <div class="space-y-1.5">
+            <p>Toby sedang membuat game menangkap benda.</p>
+            <div>
+              <p class="font-bold text-amber-300">Aturan permainan:</p>
+              <ul class="list-disc list-inside ml-1 text-slate-300 space-y-0.5">
+                <li>Jika menyentuh Bintang 🌟, skor bertambah 1.</li>
+                <li>Jika menyentuh Bom 💣, permainan langsung berhenti.</li>
+              </ul>
+            </div>
+            <p class="text-rose-300 font-semibold">Namun, saat game dijalankan, permainan malah langsung berhenti.</p>
+            <div>
+              <p class="font-bold text-sky-300">Tugas:</p>
+              <p class="text-slate-300">Cari balok yang salah, hapus balok tersebut, lalu pasang balok yang benar agar permainan dapat berjalan dengan baik.</p>
+            </div>
+          </div>
+        `,
+        subtext: "Toby vs Star & Bomb",
+        mode: "catch",
+        reflectionPrompt: "Jelaskan: 1) Balok apa yang salah letak sebelumnya? 2) Mengapa game langsung macet saat bendera hijau ditekan? 3) Balok apa saja yang kamu perbaiki? (minimal 20 kata)",
+        hint: "Coba amati balok 'stop all'. Apakah balok itu berada di dalam sarang percabangan 'if' atau malah berdiri bebas di luar sehingga langsung dieksekusi saat game mulai?",
+        initialSlots: {
+          cond1: "trap_touching_edge",
+          body1: "trap_set_score_1",
+          cond2: "touching_star",
+          body2: "empty",
+          outsideSlot: "stop_all"
+        },
+        palette: [
+          { id: "change_score_1", type: "stack", label: "change [score ▼] by (1)", color: "#FF8C1A", stroke: "#DB6E00" },
+          { id: "stop_all", type: "stack", label: "stop [all ▼]", color: "#FFAB19", stroke: "#CF8B17" },
+          { id: "touching_star", type: "sensing", label: "touching [Star ▼] ?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "touching_bomb", type: "sensing", label: "touching [Bomb ▼] ?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "trap_set_score_1", type: "stack", label: "set [score ▼] to (1)", color: "#FF8C1A", stroke: "#DB6E00" },
+          { id: "trap_set_score_0", type: "stack", label: "set [score ▼] to (0)", color: "#FF8C1A", stroke: "#DB6E00" },
+          { id: "trap_touching_edge", type: "sensing", label: "touching [edge ▼] ?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "trap_touching_mouse", type: "sensing", label: "touching [mouse-pointer ▼] ?", color: "#5CB1D6", stroke: "#4795B5" }
+        ],
+        validator: (slots) => {
+          const starValid = (
+            (slots.cond1 === "touching_star" && slots.body1 === "change_score_1") ||
+            (slots.cond2 === "touching_star" && slots.body2 === "change_score_1")
+          );
+          const bombValid = (
+            (slots.cond1 === "touching_bomb" && slots.body1 === "stop_all") ||
+            (slots.cond2 === "touching_bomb" && slots.body2 === "stop_all")
+          );
+          const outsideClean = (slots.outsideSlot === "empty" || !slots.outsideSlot);
+          return starValid && bombValid && outsideClean;
+        }
+      },
+      {
+        id: 2,
+        name: "Soal 3",
+        icon: "🧭",
+        title: "Studi Kasus 3: Arah Gerak Terbalik pada Tombol Panah",
+        description: `
+          <div class="space-y-1.5">
+            <p>Toby sedang membuat program kendali keyboard untuk menggerakkan sprite ke kanan dan ke kiri.</p>
+            <div>
+              <p class="font-bold text-amber-300">Aturan permainan:</p>
+              <ul class="list-disc list-inside ml-1 text-slate-300 space-y-0.5">
+                <li>Jika tombol panah kanan ditekan, sprite bergerak maju ke kanan.</li>
+                <li>Jika tombol panah kiri ditekan, sprite bergerak mundur ke kiri.</li>
+              </ul>
+            </div>
+            <p class="text-rose-300 font-semibold">Namun, saat tombol panah kanan ditekan, sprite bergerak ke arah kiri.</p>
+            <div>
+              <p class="font-bold text-sky-300">Tugas:</p>
+              <p class="text-slate-300">Cari balok gerak yang tertukar atau salah letak, lalu pasang balok yang tepat agar arah gerak sprite sesuai.</p>
+            </div>
+          </div>
+        `,
+        subtext: "Uji Tombol Sumbu X (Right vs Left)",
+        mode: "movement",
+        reflectionPrompt: "Jelaskan: 1) Mengapa tombol panah kanan membuat sprite bergerak ke kiri? 2) Balok koordinat apa yang nilainya tertukar? 3) Bagaimana cara memperbaikinya? (minimal 20 kata)",
+        hint: "Ingat garis bilangan matematika: bergerak ke kanan berarti nilai bertambah positif (+10), sedangkan bergerak ke kiri nilainya berkurang negatif (-10). Coba periksa apakah nilai baloknya terbalik!",
+        initialSlots: {
+          cond1: "key_right_arrow",
+          body1: "change_x_minus_10",
+          cond2: "key_left_arrow",
+          body2: "change_x_plus_10",
+          outsideSlot: "trap_change_y_10"
+        },
+        palette: [
+          { id: "change_x_plus_10", type: "stack", label: "change x by (10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "change_x_minus_10", type: "stack", label: "change x by (-10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "key_right_arrow", type: "sensing", label: "key [right arrow ▼] pressed?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "key_left_arrow", type: "sensing", label: "key [left arrow ▼] pressed?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "trap_set_x_10", type: "stack", label: "set x to (10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "trap_change_y_10", type: "stack", label: "change y by (10)", color: "#4C97FF", stroke: "#3373CC" }
+        ],
+        validator: (slots) => {
+          const rightValid = (
+            (slots.cond1 === "key_right_arrow" && slots.body1 === "change_x_plus_10") ||
+            (slots.cond2 === "key_right_arrow" && slots.body2 === "change_x_plus_10")
+          );
+          const leftValid = (
+            (slots.cond1 === "key_left_arrow" && slots.body1 === "change_x_minus_10") ||
+            (slots.cond2 === "key_left_arrow" && slots.body2 === "change_x_minus_10")
+          );
+          const outsideClean = (slots.outsideSlot === "empty" || !slots.outsideSlot);
+          return rightValid && leftValid && outsideClean;
+        }
+      },
+      {
+        id: 3,
+        name: "Soal 4",
+        icon: "🚗",
+        title: "Studi Kasus 4: Mobil Menghilang dan Tidak Kembali ke Titik Awal",
+        description: `
+          <div class="space-y-1.5">
+            <p>Toby sedang membuat animasi mobil hijau yang melaju terus-menerus di jalan raya.</p>
+            <div>
+              <p class="font-bold text-amber-300">Aturan animasi:</p>
+              <ul class="list-disc list-inside ml-1 text-slate-300 space-y-0.5">
+                <li>Mobil terus melaju ke kanan di sepanjang jalan raya.</li>
+                <li>Jika menyentuh Garis Merah di ujung kanan, mobil harus langsung kembali ke titik awal paling kiri.</li>
+              </ul>
+            </div>
+            <p class="text-rose-300 font-semibold">Namun, saat menyentuh garis merah, mobil malah terus bablas keluar layar hingga menghilang dan tidak kembali.</p>
+            <div>
+              <p class="font-bold text-sky-300">Tugas:</p>
+              <p class="text-slate-300">Lengkapi balok percabangan dengan kondisi dan aksi yang benar agar mobil otomatis berputar kembali ke posisi awal.</p>
+            </div>
+          </div>
+        `,
+        subtext: "Animasi Jalan Raya: Mobil Hijau & Garis Merah",
+        mode: "car_loop",
+        reflectionPrompt: "Jelaskan: 1) Mengapa mobil hijau bisa terus melaju hingga menghilang dari layar? 2) Balok apa yang belum mendeteksi garis merah? 3) Mengapa balok 'set x to (-240)' mampu mengembalikan mobil ke titik awal? (minimal 20 kata)",
+        hint: "Mobil membutuhkan sensor untuk tahu kapan ia menyentuh rintangan merah ('touching Line?'). Saat tersentuh, gunakan balok 'set x' ke angka paling kiri (-240) agar mobil teleportasi kembali ke titik start.",
+        initialSlots: {
+          cond1: "trap_touching_mouse",
+          body1: "empty",
+          cond2: "empty",
+          body2: "empty",
+          outsideSlot: "change_x_plus_10"
+        },
+        palette: [
+          { id: "change_x_plus_10", type: "stack", label: "change x by (10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "set_x_minus_240", type: "stack", label: "set x to (-240)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "touching_line", type: "sensing", label: "touching [Line ▼] ?", color: "#5CB1D6", stroke: "#4795B5" },
+          { id: "change_x_minus_10", type: "stack", label: "change x by (-10)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "trap_set_x_plus_240", type: "stack", label: "set x to (240)", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "trap_touching_mouse", type: "sensing", label: "touching [mouse-pointer ▼] ?", color: "#5CB1D6", stroke: "#4795B5" }
+        ],
+        validator: (slots) => {
+          const moveStepValid = (slots.outsideSlot === "change_x_plus_10");
+          const lineResetValid = (
+            (slots.cond1 === "touching_line" && slots.body1 === "set_x_minus_240") ||
+            (slots.cond2 === "touching_line" && slots.body2 === "set_x_minus_240")
+          );
+          const secondBodyClean = (
+            (slots.cond1 === "touching_line" && (slots.body2 === "empty" || !slots.body2)) ||
+            (slots.cond2 === "touching_line" && (slots.body1 === "empty" || !slots.body1))
+          );
+          return moveStepValid && lineResetValid && secondBodyClean;
+        }
+      },
+      {
+        id: 4,
+        name: "Soal 5",
+        icon: "🐻",
+        title: "Studi Kasus 5: Petualangan Bear Melewati Batu Menuju Rumah",
+        description: `
+          <div class="space-y-1.5">
+            <p>Toby sedang membuat animasi petualangan karakter Bear pulang ke rumahnya.</p>
+            <div>
+              <p class="font-bold text-amber-300">Aturan animasi:</p>
+              <ul class="list-disc list-inside ml-1 text-slate-300 space-y-0.5">
+                <li>Bear harus berjalan maju untuk mendekati rintangan batu.</li>
+                <li>Bear harus melompat agar tidak menabrak batu di depannya.</li>
+                <li>Bear harus berjalan maju kembali sampai tiba di rumahnya dengan selamat.</li>
+              </ul>
+            </div>
+            <p class="text-rose-300 font-semibold">Namun, lembar kode perintah Bear saat ini masih kosong sehingga Bear hanya diam di tempat.</p>
+            <div>
+              <p class="font-bold text-sky-300">Tugas:</p>
+              <p class="text-slate-300">Pilihlah balok yang tepat dari kotak balok dan susun secara berurutan agar Bear bisa berjalan, melompat, lalu berjalan lagi sampai ke rumah!</p>
+            </div>
+          </div>
+        `,
+        subtext: "Petualangan Bear: Batu & Rumah",
+        mode: "bear_walk",
+        reflectionPrompt: "Jelaskan: 1) Mengapa urutan balok harus runtut dari berjalan, melompat, lalu berjalan lagi? 2) Apa yang akan terjadi jika balok melompat diletakkan di awal sebelum melangkah maju? (minimal 20 kata)",
+        hint: "Urutan langkah (algoritma sekuensial) sangat penting! Bayangkan kamu sendiri yang berjalan: apakah kamu melompat dulu sebelum ada batu di depanmu, atau melangkah mendekati batu baru melompat?",
+        initialSlots: {
+          seq1: "empty",
+          seq2: "empty",
+          seq3: "empty"
+        },
+        palette: [
+          { id: "move_50_steps", type: "stack", label: "move (50) steps", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "jump", type: "stack", label: "jump", color: "#FF6680", stroke: "#DB4D68" },
+          { id: "trap_move_minus_50", type: "stack", label: "move (-50) steps", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "trap_turn_15", type: "stack", label: "turn ↷ (15) degrees", color: "#4C97FF", stroke: "#3373CC" },
+          { id: "trap_wait_1", type: "stack", label: "wait (1) secs", color: "#FFAB19", stroke: "#CF8B17" },
+          { id: "trap_touching_rock", type: "sensing", label: "touching [Rock ▼] ?", color: "#5CB1D6", stroke: "#4795B5" }
+        ],
+        validator: (slots) => {
+          return (
+            slots.seq1 === "move_50_steps" &&
+            slots.seq2 === "jump" &&
+            slots.seq3 === "move_50_steps"
+          );
+        }
+      }
+    ];
+
+    let studentProfile = { name: "", classNum: "" };
+    let EXAM_DURATION_SECONDS = 60 * 60; // 60 menit
+    let examTimeRemaining = EXAM_DURATION_SECONDS;
+    let examTimerInterval = null;
+    let isExamFinished = false;
+
+    // GOOGLE SHEETS WEB APP URL
+    // Ganti URL di bawah dengan URL Web App Google Apps Script Anda jika ada:
+    const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_example_endpoint/exec";
+
+    // NOMOR WHATSAPP GURU (Opsional: ganti dengan nomor Anda, misal: '6281234567890')
+    const TEACHER_WA_NUMBER = "";
+
+    let currentQuestionIndex = 0;
+    let userSlotPerQuestion = [
+      { ...QUESTIONS_DATA[0].initialSlots },
+      { ...QUESTIONS_DATA[1].initialSlots },
+      { ...QUESTIONS_DATA[2].initialSlots },
+      { ...QUESTIONS_DATA[3].initialSlots },
+      { ...QUESTIONS_DATA[4].initialSlots }
+    ];
+    let studentReflections = ["", "", "", "", ""];
+    let questionCompleted = [false, false, false, false, false];
+    let workspaceZoom = 1.0;
+    let selectedPaletteBlock = null;
+
+    function getActiveQuestion() {
+      return QUESTIONS_DATA[currentQuestionIndex];
+    }
+    function getActiveSlots() {
+      return userSlotPerQuestion[currentQuestionIndex];
+    }
+    function getBlockObj(blockId) {
+      const q = getActiveQuestion();
+      return q.palette.find(b => b.id === blockId) || null;
+    }
+  </script>
+
+  <!-- JAVASCRIPT: TIMER & HINT SYSTEM -->
+  <script>
+    function handleStartExam(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('inputStudentName');
+      const classInput = document.getElementById('inputStudentClass');
+      if (!nameInput || !classInput) return;
+
+      const name = nameInput.value.trim();
+      const classNum = classInput.value.trim();
+      if (!name || !classNum) return;
+
+      studentProfile.name = name;
+      studentProfile.classNum = classNum;
+
+      // Update Header
+      const headerStudentName = document.getElementById('headerStudentName');
+      const headerStudentBadge = document.getElementById('headerStudentBadge');
+      if (headerStudentName) headerStudentName.textContent = name;
+      if (headerStudentBadge) headerStudentBadge.classList.remove('hidden');
+
+      // Hide Modal
+      const modal = document.getElementById('startExamModal');
+      if (modal) modal.classList.add('hidden');
+
+      audio.playVictory();
+      startExamTimer();
+    }
+
+    function startExamTimer() {
+      if (examTimerInterval) clearInterval(examTimerInterval);
+      updateTimerDisplay();
+
+      examTimerInterval = setInterval(() => {
+        if (isExamFinished) {
+          clearInterval(examTimerInterval);
+          return;
+        }
+
+        examTimeRemaining--;
+        updateTimerDisplay();
+        checkHintProgress();
+
+        if (examTimeRemaining <= 0) {
+          clearInterval(examTimerInterval);
+          handleTimeExpiredAutoSubmit();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const display = document.getElementById('examTimerDisplay');
+      if (!display) return;
+      const mins = Math.floor(examTimeRemaining / 60);
+      const secs = examTimeRemaining % 60;
+      display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+      // Warna peringatan waktu menipis
+      if (examTimeRemaining <= 300) { // < 5 menit
+        display.className = "font-mono text-xs sm:text-sm font-black text-rose-400 animate-pulse tracking-wider";
+      } else if (examTimeRemaining <= 900) { // < 15 menit
+        display.className = "font-mono text-xs sm:text-sm font-black text-amber-300 tracking-wider";
+      }
+    }
+
+    // Tiap 10 menit (600 detik) buka 1 hint
+    function getUnlockedHintCount() {
+      const elapsed = EXAM_DURATION_SECONDS - examTimeRemaining;
+      if (elapsed >= 3000) return 5; // >= 50 menit: semua 5 hint terbuka
+      if (elapsed >= 2400) return 4; // >= 40 menit: hint 1-4 terbuka
+      if (elapsed >= 1800) return 3; // >= 30 menit: hint 1-3 terbuka
+      if (elapsed >= 1200) return 2; // >= 20 menit: hint 1-2 terbuka
+      if (elapsed >= 600) return 1;  // >= 10 menit: hint 1 terbuka
+      return 0;                      // < 10 menit: belum ada hint
+    }
+
+    let lastHintCount = 0;
+    function checkHintProgress() {
+      const unlocked = getUnlockedHintCount();
+      const badge = document.getElementById('unlockedHintsBadge');
+      if (badge) badge.textContent = `${unlocked}/5`;
+
+      if (unlocked > lastHintCount) {
+        lastHintCount = unlocked;
+        audio.playStar();
+        showStageToast(`💡 Bantuan Baru Terbuka! (${unlocked}/5)`);
+        const btn = document.getElementById('btnOpenHintModal');
+        if (btn) btn.classList.add('hint-alert-glow');
+      }
+    }
+
+    function openHintModal() {
+      audio.init();
+      audio.playGrab();
+      const modal = document.getElementById('hintsModal');
+      const list = document.getElementById('hintsContainerList');
+      const btn = document.getElementById('btnOpenHintModal');
+      if (btn) btn.classList.remove('hint-alert-glow');
+
+      if (!modal || !list) return;
+      const unlockedCount = getUnlockedHintCount();
+      const elapsedMins = Math.floor((EXAM_DURATION_SECONDS - examTimeRemaining) / 60);
+
+      list.innerHTML = "";
+      QUESTIONS_DATA.forEach((q, idx) => {
+        const isUnlocked = (idx < unlockedCount);
+        const item = document.createElement('div');
+        item.className = `p-3 rounded-2xl border transition ${isUnlocked ? 'bg-indigo-950/40 border-indigo-500/50 text-slate-100' : 'bg-slate-900/50 border-slate-700/60 text-slate-400 opacity-60'}`;
+
+        item.innerHTML = `
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold font-brand text-amber-300 flex items-center gap-1.5">
+              <span>${q.icon}</span> <span>Bantuan ${q.name}</span>
+            </span>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${isUnlocked ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' : 'bg-slate-800 text-slate-400'}">
+              ${isUnlocked ? 'Terbuka 🔓' : `Terkunci 🔒 (Menit ke-${(idx + 1) * 10})`}
+            </span>
+          </div>
+          <p class="text-[11px] leading-relaxed mt-1.5 ${isUnlocked ? 'text-slate-200' : 'text-slate-500 italic'}">
+            ${isUnlocked ? q.hint : `⏳ Bantuan untuk ${q.name} akan terbuka otomatis setelah ${ (idx + 1) * 10 } menit pengerjaan.`}
+          </p>
+        `;
+        list.appendChild(item);
+      });
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeHintModal() {
+      const modal = document.getElementById('hintsModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+  </script>
+
+  <!-- JAVASCRIPT: SVG SCRIPT WORKSPACE & PALETTE -->
+  <script>
+    function renderPalette() {
+      const q = getActiveQuestion();
+      const container = document.getElementById('paletteBlocksContainer');
+      const badge = document.getElementById('toolboxBlockCountBadge');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (badge) {
+        if (q.palette.length > 8) {
+          badge.textContent = `${q.palette.length} Balok (Gulir ▼)`;
+          badge.className = "text-[10px] text-amber-300 bg-amber-500/20 border border-amber-400/40 px-2 py-0.5 rounded font-bold";
+        } else {
+          badge.textContent = "Tarik / Ketuk Balok";
+          badge.className = "text-[10px] text-slate-400 bg-slate-700/60 px-2 py-0.5 rounded";
+        }
+      }
+
+      q.palette.forEach(block => {
+        const item = document.createElement('div');
+        const isSensing = block.type === 'sensing';
+        item.className = `draggable-block p-2 rounded-xl border flex items-center justify-between cursor-grab text-xs font-bold text-white shadow-sm transition ${isSensing ? 'rounded-full px-3' : ''}`;
+        item.style.backgroundColor = block.color;
+        item.style.borderColor = block.stroke;
+        item.style.touchAction = 'pan-y';
+        item.setAttribute('draggable', 'true');
+        item.dataset.blockId = block.id;
+        item.dataset.blockType = block.type;
+
+        item.innerHTML = `
+          <span>${block.label}</span>
+          <span class="text-[10px] opacity-75 font-mono ml-2">(${isSensing ? 'sensing' : 'stack'})</span>
+        `;
+
+        item.addEventListener('dragstart', (e) => {
+          audio.playGrab();
+          e.dataTransfer.setData('text/plain', JSON.stringify({ blockId: block.id, type: block.type, source: 'palette' }));
+        });
+
+        // Mobile / Tablet tap selection
+        item.addEventListener('click', () => {
+          audio.playGrab();
+          triggerHaptic(30);
+          document.querySelectorAll('.draggable-block').forEach(el => el.classList.remove('tap-selected-block'));
+          if (selectedPaletteBlock && selectedPaletteBlock.id === block.id) {
+            selectedPaletteBlock = null;
+          } else {
+            selectedPaletteBlock = block;
+            item.classList.add('tap-selected-block');
+          }
+        });
+
+        container.appendChild(item);
+      });
+    }
+
+    function renderWorkspaceScript() {
+      const container = document.getElementById('codeScriptSvgContainer');
+      if (!container) return;
+      const slots = getActiveSlots();
+
+      function renderCondSlotSvg(key, blockId, x, y) {
+        if (blockId && blockId !== 'empty') {
+          const b = getBlockObj(blockId) || { label: blockId, color: '#5CB1D6', stroke: '#4795B5' };
+          return `
+            <g transform="translate(${x}, ${y})" class="drop-zone" data-slot-key="${key}" data-accepts="sensing" cursor="pointer" onclick="handleSlotBlockClick('${key}')">
+              <polygon points="10,3 186,3 198,17 186,31 10,31 0,17" fill="${b.color}" stroke="${b.stroke}" stroke-width="1.8" />
+              <text x="14" y="17" class="block-text text-[11px]">${b.label}</text>
+            </g>
+          `;
+        } else {
+          return `
+            <g transform="translate(${x}, ${y})" class="drop-zone" data-slot-key="${key}" data-accepts="sensing" cursor="pointer" onclick="handleSlotBlockClick('${key}')">
+              <polygon points="10,3 186,3 198,17 186,31 10,31 0,17" fill="#CDE7F3" stroke="#4795B5" stroke-width="1.8" stroke-dasharray="4 3" />
+              <text x="24" y="17" fill="#1E6585" font-size="10.5" font-weight="700" dominant-baseline="central" pointer-events="none">&lt; letakkan sensing &gt;</text>
+            </g>
+          `;
+        }
+      }
+
+      function renderStackSlotSvg(key, blockId, x, y, defaultPrompt = "letakkan balok") {
+        if (blockId && blockId !== 'empty') {
+          const b = getBlockObj(blockId) || { label: blockId, color: '#4C97FF', stroke: '#3373CC' };
+          return `
+            <g transform="translate(${x}, ${y})" class="drop-zone" data-slot-key="${key}" data-accepts="stack" cursor="pointer" onclick="handleSlotBlockClick('${key}')">
+              <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 206 0 a 4 4 0 0 1 4 4 L 210 28 a 4 4 0 0 1 -4 4 L 56 32 c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 L 4 32 a 4 4 0 0 1 -4 -4 Z" 
+                    fill="${b.color}" stroke="${b.stroke}" stroke-width="1.8" />
+              <text x="14" y="16" class="block-text text-[11.5px]">${b.label}</text>
+            </g>
+          `;
+        } else {
+          return `
+            <g transform="translate(${x}, ${y})" class="drop-zone" data-slot-key="${key}" data-accepts="stack" cursor="pointer" onclick="handleSlotBlockClick('${key}')">
+              <rect x="0" y="0" width="210" height="32" rx="4" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.6" stroke-dasharray="4 3" />
+              <text x="24" y="16" fill="#3B82F6" font-size="10" font-weight="700" dominant-baseline="central" pointer-events="none">&lt; ${defaultPrompt} &gt;</text>
+            </g>
+          `;
+        }
+      }
+
+      if (currentQuestionIndex === 4) {
+        // QUESTION 5: LINEAR STACK (Bear Adventure)
+        const svgHtml = `
+        <svg id="masterScriptSvg" width="460" height="260" viewBox="0 0 460 260" class="filter drop-shadow-md select-none" style="transform: scale(${workspaceZoom}); transform-origin: top center;">
+          <g transform="translate(20, 10)">
+            <path d="M 0 16 C 25 -4, 70 -4, 95 16 L 150 16 a 4 4 0 0 1 4 4 L 154 44 a 4 4 0 0 1 -4 4 L 56 48 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 4 48 a 4 4 0 0 1 -4 -4 Z" 
+                  fill="#FFBF00" stroke="#CC9900" stroke-width="1.8" />
+            <text x="18" y="32" class="block-text-dark">when</text>
+            <path d="M 58 24 v 16 h 2 v -6 h 8 l -1 -3 1 -3 h -8 v -4 Z" fill="#22C55E" />
+            <text x="74" y="32" class="block-text-dark">clicked</text>
+          </g>
+
+          <g transform="translate(20, 58)">
+            ${renderStackSlotSvg('seq1', slots.seq1, 0, 0, "+ Langkah 1: Jalan")}
+          </g>
+          <g transform="translate(20, 96)">
+            ${renderStackSlotSvg('seq2', slots.seq2, 0, 0, "+ Langkah 2: Lewati Rintangan")}
+          </g>
+          <g transform="translate(20, 134)">
+            ${renderStackSlotSvg('seq3', slots.seq3, 0, 0, "+ Langkah 3: Menuju Rumah")}
+          </g>
+        </svg>
+        `;
+        container.innerHTML = svgHtml;
+        attachDropListeners();
+        evaluateLogicStatus();
+        return;
+      }
+
+      if (currentQuestionIndex === 0) {
+        // QUESTION 1: 4-IF NESTED IN FOREVER (Zilong 4-Way)
+        const svgHtml = `
+        <svg id="masterScriptSvg" width="460" height="520" viewBox="0 0 460 520" class="filter drop-shadow-md select-none" style="transform: scale(${workspaceZoom}); transform-origin: top center;">
+          <!-- HAT BLOCK -->
+          <g transform="translate(20, 10)">
+            <path d="M 0 16 C 25 -4, 70 -4, 95 16 L 150 16 a 4 4 0 0 1 4 4 L 154 44 a 4 4 0 0 1 -4 4 L 56 48 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 4 48 a 4 4 0 0 1 -4 -4 Z" 
+                  fill="#FFBF00" stroke="#CC9900" stroke-width="1.8" />
+            <text x="18" y="32" class="block-text-dark">when</text>
+            <path d="M 58 24 v 16 h 2 v -6 h 8 l -1 -3 1 -3 h -8 v -4 Z" fill="#22C55E" />
+            <text x="74" y="32" class="block-text-dark">clicked</text>
+          </g>
+
+          <!-- FOREVER WRAPPER (HEIGHT 420) -->
+          <g transform="translate(20, 58)">
+            <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 140 0 a 4 4 0 0 1 4 4 L 144 32 a 4 4 0 0 1 -4 4 L 56 36 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 20 36 L 20 410 L 56 410 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 0 410 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            <text x="14" y="18" class="block-text">forever</text>
+            
+            <path d="M 0 410 L 20 410 L 130 410 a 4 4 0 0 1 4 4 L 134 436 a 4 4 0 0 1 -4 4 L 4 440 a 4 4 0 0 1 -4 -4 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            <path d="M 112 428 a 6 6 0 1 1 0 -4 l 2 2 m -2 -2 l -2 2" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+          </g>
+
+          <!-- IF 1 -->
+          <g transform="translate(40, 94)">
+            <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 320 0 a 4 4 0 0 1 4 4 L 324 34 a 4 4 0 0 1 -4 4 L 56 38 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 18 38 L 18 80 L 56 80 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 0 80 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            <text x="12" y="19" class="block-text">if</text>
+            <text x="272" y="19" class="block-text">then</text>
+            <path d="M 0 80 L 18 80 L 100 80 a 4 4 0 0 1 4 4 L 104 96 a 4 4 0 0 1 -4 4 L 56 100 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 4 100 a 4 4 0 0 1 -4 -4 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            ${renderCondSlotSvg('q5_cond1', slots.q5_cond1, 36, 2)}
+            ${renderStackSlotSvg('q5_body1', slots.q5_body1, 24, 42, "arah 1")}
+          </g>
+
+          <!-- IF 2 -->
+          <g transform="translate(40, 188)">
+            <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 320 0 a 4 4 0 0 1 4 4 L 324 34 a 4 4 0 0 1 -4 4 L 56 38 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 18 38 L 18 80 L 56 80 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 0 80 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            <text x="12" y="19" class="block-text">if</text>
+            <text x="272" y="19" class="block-text">then</text>
+            <path d="M 0 80 L 18 80 L 100 80 a 4 4 0 0 1 4 4 L 104 96 a 4 4 0 0 1 -4 4 L 56 100 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 4 100 a 4 4 0 0 1 -4 -4 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            ${renderCondSlotSvg('q5_cond2', slots.q5_cond2, 36, 2)}
+            ${renderStackSlotSvg('q5_body2', slots.q5_body2, 24, 42, "arah 2")}
+          </g>
+
+          <!-- IF 3 -->
+          <g transform="translate(40, 282)">
+            <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 320 0 a 4 4 0 0 1 4 4 L 324 34 a 4 4 0 0 1 -4 4 L 56 38 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 18 38 L 18 80 L 56 80 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 0 80 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            <text x="12" y="19" class="block-text">if</text>
+            <text x="272" y="19" class="block-text">then</text>
+            <path d="M 0 80 L 18 80 L 100 80 a 4 4 0 0 1 4 4 L 104 96 a 4 4 0 0 1 -4 4 L 56 100 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 4 100 a 4 4 0 0 1 -4 -4 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            ${renderCondSlotSvg('q5_cond3', slots.q5_cond3, 36, 2)}
+            ${renderStackSlotSvg('q5_body3', slots.q5_body3, 24, 42, "arah 3")}
+          </g>
+
+          <!-- IF 4 -->
+          <g transform="translate(40, 376)">
+            <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 320 0 a 4 4 0 0 1 4 4 L 324 34 a 4 4 0 0 1 -4 4 L 56 38 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 18 38 L 18 80 L 56 80 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 0 80 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            <text x="12" y="19" class="block-text">if</text>
+            <text x="272" y="19" class="block-text">then</text>
+            <path d="M 0 80 L 18 80 L 100 80 a 4 4 0 0 1 4 4 L 104 96 a 4 4 0 0 1 -4 4 L 56 100 
+                     c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                     L 4 100 a 4 4 0 0 1 -4 -4 Z" 
+                  fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+            ${renderCondSlotSvg('q5_cond4', slots.q5_cond4, 36, 2)}
+            ${renderStackSlotSvg('q5_body4', slots.q5_body4, 24, 42, "arah 4")}
+          </g>
+        </svg>
+        `;
+        container.innerHTML = svgHtml;
+        attachDropListeners();
+        evaluateLogicStatus();
+        return;
+      }
+
+      // QUESTIONS 1, 2, 3 (indices 1, 2, 3): FOREVER WITH IF BLOCKS
+      let initBlockSvg = '';
+      let foreverTranslateY = 58;
+      let totalSvgHeight = 440;
+
+      if (currentQuestionIndex === 3) {
+        // Soal 4: Mobil Hijau & Garis Merah
+        initBlockSvg = `
+          <g transform="translate(20, 58)">
+            <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 206 0 a 4 4 0 0 1 4 4 L 210 28 a 4 4 0 0 1 -4 4 L 56 32 c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 L 4 32 a 4 4 0 0 1 -4 -4 Z" 
+                  fill="#4C97FF" stroke="#3373CC" stroke-width="1.8" />
+            <text x="14" y="16" class="block-text text-[11.5px]">set x to (-240)</text>
+          </g>
+        `;
+        foreverTranslateY = 92;
+        totalSvgHeight = 470;
+      }
+
+      const svgHtml = `
+      <svg id="masterScriptSvg" width="460" height="${totalSvgHeight}" viewBox="0 0 460 ${totalSvgHeight}" class="filter drop-shadow-md select-none" style="transform: scale(${workspaceZoom}); transform-origin: top center;">
+        
+        <!-- HAT BLOCK -->
+        <g transform="translate(20, 10)">
+          <path d="M 0 16 C 25 -4, 70 -4, 95 16 L 150 16 a 4 4 0 0 1 4 4 L 154 44 a 4 4 0 0 1 -4 4 L 56 48 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 4 48 a 4 4 0 0 1 -4 -4 Z" 
+                fill="#FFBF00" stroke="#CC9900" stroke-width="1.8" />
+          <text x="18" y="32" class="block-text-dark">when</text>
+          <path d="M 58 24 v 16 h 2 v -6 h 8 l -1 -3 1 -3 h -8 v -4 Z" fill="#22C55E" />
+          <text x="74" y="32" class="block-text-dark">clicked</text>
+        </g>
+
+        ${initBlockSvg}
+
+        <!-- FOREVER WRAPPER -->
+        <g transform="translate(20, ${foreverTranslateY})">
+          <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 140 0 a 4 4 0 0 1 4 4 L 144 32 a 4 4 0 0 1 -4 4 L 56 36 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 20 36 L 20 310 L 56 310 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 0 310 Z" 
+                fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+          <text x="14" y="18" class="block-text">forever</text>
+          
+          <path d="M 0 310 L 20 310 L 130 310 a 4 4 0 0 1 4 4 L 134 336 a 4 4 0 0 1 -4 4 L 4 340 a 4 4 0 0 1 -4 -4 Z" 
+                fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+          <path d="M 112 328 a 6 6 0 1 1 0 -4 l 2 2 m -2 -2 l -2 2" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+        </g>
+
+        <!-- OUTSIDE SLOT -->
+        <g transform="translate(40, ${foreverTranslateY + 36})">
+          ${renderStackSlotSvg('outsideSlot', slots.outsideSlot, 0, 0, currentQuestionIndex === 3 ? "balok gerak melaju mobil" : "slot aksi bebas luar if")}
+        </g>
+
+        <!-- IF 1 -->
+        <g transform="translate(40, ${foreverTranslateY + 74})">
+          <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 320 0 a 4 4 0 0 1 4 4 L 324 34 a 4 4 0 0 1 -4 4 L 56 38 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 18 38 L 18 80 L 56 80 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 0 80 Z" 
+                fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+          <text x="12" y="19" class="block-text">if</text>
+          <text x="272" y="19" class="block-text">then</text>
+          <path d="M 0 80 L 18 80 L 100 80 a 4 4 0 0 1 4 4 L 104 96 a 4 4 0 0 1 -4 4 L 56 100 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 4 100 a 4 4 0 0 1 -4 -4 Z" 
+                fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+          ${renderCondSlotSvg('cond1', slots.cond1, 36, 2)}
+          ${renderStackSlotSvg('body1', slots.body1, 24, 42, "aksi kondisi 1")}
+        </g>
+
+        <!-- IF 2 -->
+        <g transform="translate(40, ${foreverTranslateY + 176})" style="${currentQuestionIndex === 3 ? 'opacity: 0.35;' : ''}">
+          <path d="M 0 0 L 12 0 c 2,0 3,1 4,2 l 4,4 c 1,1 2,2 4,2 h 12 c 2,0 3,-1 4,-2 l 4,-4 c 1,-1 2,-2 4,-2 L 320 0 a 4 4 0 0 1 4 4 L 324 34 a 4 4 0 0 1 -4 4 L 56 38 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 18 38 L 18 80 L 56 80 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 0 80 Z" 
+                fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+          <text x="12" y="19" class="block-text">if</text>
+          <text x="272" y="19" class="block-text">then</text>
+          <path d="M 0 80 L 18 80 L 100 80 a 4 4 0 0 1 4 4 L 104 96 a 4 4 0 0 1 -4 4 L 56 100 
+                   c -1,0 -2,1 -4,2 l -4,4 c -1,1 -2,2 -4,2 h -12 c -2,0 -3,-1 -4,-2 l -4,-4 c -1,-1 -2,-2 -4,-2 
+                   L 4 100 a 4 4 0 0 1 -4 -4 Z" 
+                fill="#FFAB19" stroke="#CF8B17" stroke-width="1.8" />
+          ${renderCondSlotSvg('cond2', slots.cond2, 36, 2)}
+          ${renderStackSlotSvg('body2', slots.body2, 24, 42, "aksi kondisi 2")}
+        </g>
+      </svg>
+      `;
+
+      container.innerHTML = svgHtml;
+      attachDropListeners();
+      evaluateLogicStatus();
+    }
+
+    function handleSlotBlockClick(slotKey) {
+      const slots = getActiveSlots();
+      if (selectedPaletteBlock) {
+        const isSensingSlot = slotKey.startsWith('cond') || slotKey.includes('_cond');
+        if (isSensingSlot && selectedPaletteBlock.type !== 'sensing') return;
+        if (!isSensingSlot && selectedPaletteBlock.type !== 'stack') return;
+
+        slots[slotKey] = selectedPaletteBlock.id;
+        selectedPaletteBlock = null;
+        document.querySelectorAll('.draggable-block').forEach(el => el.classList.remove('tap-selected-block'));
+        audio.playSnap();
+        triggerHaptic(50);
+        renderWorkspaceScript();
+      } else {
+        if (slots[slotKey] && slots[slotKey] !== 'empty') {
+          slots[slotKey] = 'empty';
+          audio.playGrab();
+          triggerHaptic(30);
+          renderWorkspaceScript();
+        }
+      }
+    }
+
+    function attachDropListeners() {
+      const dropZones = document.querySelectorAll('.drop-zone');
+      dropZones.forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          zone.classList.add('drop-zone-highlight');
+        });
+        zone.addEventListener('dragleave', () => {
+          zone.classList.remove('drop-zone-highlight');
+        });
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          zone.classList.remove('drop-zone-highlight');
+          const raw = e.dataTransfer.getData('text/plain');
+          if (!raw) return;
+          try {
+            const data = JSON.parse(raw);
+            const slotKey = zone.dataset.slotKey;
+            const accepts = zone.dataset.accepts;
+            if (accepts !== data.type) return;
+
+            const slots = getActiveSlots();
+            slots[slotKey] = data.blockId;
+            audio.playSnap();
+            triggerHaptic(50);
+            renderWorkspaceScript();
+          } catch(err) {}
+        });
+      });
+
+      // Palette trash target
+      const trashZone = document.getElementById('paletteTrashDropZone');
+      if (trashZone) {
+        trashZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          trashZone.classList.add('palette-trash-active');
+        });
+        trashZone.addEventListener('dragleave', () => {
+          trashZone.classList.remove('palette-trash-active');
+        });
+        trashZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          trashZone.classList.remove('palette-trash-active');
+          audio.playError();
+        });
+      }
+    }
+
+    function adjustZoom(delta) {
+      workspaceZoom = Math.min(1.4, Math.max(0.7, workspaceZoom + delta));
+      renderWorkspaceScript();
+    }
+    function resetZoom() {
+      workspaceZoom = 1.0;
+      renderWorkspaceScript();
+    }
+  </script>
+
+  <!-- JAVASCRIPT: STAGE ENGINE & CANVAS RENDERING -->
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+    let isGameRunning = false;
+    let animId = null;
+
+    let tobyX = 150;
+    let tobyY = 205;
+    let moveDirection = 0;
+    let moveDirY = 0;
+
+    let carX = -240;
+    let carY = 215;
+    let carLoopCount = 0;
+    const lineWidth = 10;
+
+    // Soal 4: Bear & Forest variables
+    let bearX = 40;
+    let bearY = 195;
+    let bearJumpProgress = 0;
+    let bearExecutionPhase = 0;
+    let bearStepTimer = 0;
+
+    // Soal 5: Zilong Warrior variables
+    let zilongX = 160;
+    let zilongY = 135;
+
+    let fallingItems = [];
+    let curScore = 0;
+    let gameTicks = 0;
+
+    function drawStageToby(x, y) {
+      if (!ctx) return;
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Fur
+      ctx.fillStyle = "#FFAB19";
+      ctx.beginPath();
+      ctx.ellipse(22, 24, 18, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#CF8B17";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Ears
+      ctx.fillStyle = "#FFAB19";
+      ctx.beginPath(); ctx.moveTo(10, 12); ctx.lineTo(13, 2); ctx.lineTo(21, 10); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(23, 10); ctx.lineTo(31, 2); ctx.lineTo(34, 12); ctx.fill(); ctx.stroke();
+
+      // Eyes
+      ctx.fillStyle = "#1E293B";
+      ctx.beginPath(); ctx.arc(16, 20, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(28, 20, 2.5, 0, Math.PI * 2); ctx.fill();
+
+      // Snout
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath(); ctx.ellipse(22, 25, 5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#FF5C5C";
+      ctx.beginPath(); ctx.arc(22, 23.5, 1.8, 0, Math.PI * 2); ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawGreenConvertibleCar(xScratch, yCanvas) {
+      if (!ctx) return;
+      const canvasX = ((xScratch + 240) / 480) * (canvas.width - lineWidth - 65);
+      ctx.save();
+      ctx.translate(canvasX, yCanvas);
+
+      // Chassis
+      ctx.fillStyle = "#22C55E";
+      ctx.strokeStyle = "#14532D";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(0, 12, 70, 16, [2, 6, 2, 2]);
+      ctx.fill();
+      ctx.stroke();
+
+      // Windshield
+      ctx.fillStyle = "#BAE6FD";
+      ctx.beginPath();
+      ctx.moveTo(16, 12);
+      ctx.lineTo(26, 2);
+      ctx.lineTo(44, 2);
+      ctx.lineTo(54, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Wheels
+      ctx.fillStyle = "#1E293B";
+      ctx.beginPath(); ctx.arc(16, 28, 7.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(54, 28, 7.5, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = "#8B5CF6";
+      ctx.beginPath(); ctx.arc(16, 28, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(54, 28, 3.5, 0, Math.PI * 2); ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawCityBackdrop() {
+      if (!ctx) return;
+      ctx.fillStyle = "#E0F2FE";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const buildings = [
+        { x: 0, w: 50, h: 120, color: "#FDE68A" },
+        { x: 50, w: 60, h: 150, color: "#FBCFE8" },
+        { x: 110, w: 55, h: 110, color: "#BFDBFE" },
+        { x: 165, w: 70, h: 160, color: "#DDD6FE" },
+        { x: 235, w: 55, h: 130, color: "#A7F3D0" },
+        { x: 290, w: 60, h: 145, color: "#BAE6FD" }
+      ];
+      buildings.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x, 220 - b.h, b.w, b.h);
+      });
+
+      ctx.fillStyle = "#FEF08A";
+      ctx.fillRect(0, 220, canvas.width, 50);
+
+      ctx.fillStyle = "#EF4444";
+      ctx.fillRect(canvas.width - lineWidth, 0, lineWidth, canvas.height);
+    }
+
+    function drawForestBackdrop() {
+      if (!ctx) return;
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      skyGrad.addColorStop(0, "#BAE6FD");
+      skyGrad.addColorStop(0.5, "#E0F2FE");
+      skyGrad.addColorStop(1, "#86EFAC");
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Trees
+      ctx.fillStyle = "#15803D";
+      ctx.beginPath();
+      ctx.arc(60, 90, 50, 0, Math.PI * 2);
+      ctx.arc(140, 70, 65, 0, Math.PI * 2);
+      ctx.arc(220, 85, 55, 0, Math.PI * 2);
+      ctx.arc(300, 75, 60, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Grass ground
+      ctx.fillStyle = "#16A34A";
+      ctx.fillRect(0, 205, canvas.width, 65);
+
+      // Rock obstacle (center)
+      ctx.fillStyle = "#475569";
+      ctx.beginPath();
+      ctx.moveTo(150, 230);
+      ctx.lineTo(162, 212);
+      ctx.lineTo(192, 214);
+      ctx.lineTo(206, 230);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#1E293B";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // House (Far Right)
+      ctx.save();
+      ctx.translate(275, 148);
+      ctx.fillStyle = "#FDE68A";
+      ctx.fillRect(0, 32, 65, 55);
+      ctx.strokeStyle = "#B45309";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 32, 65, 55);
+
+      ctx.fillStyle = "#EF4444";
+      ctx.beginPath();
+      ctx.moveTo(-6, 32); ctx.lineTo(32, 0); ctx.lineTo(71, 32); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle = "#78350F";
+      ctx.fillRect(22, 52, 20, 35);
+      ctx.fillStyle = "#1E293B";
+      ctx.font = "bold 9px Nunito";
+      ctx.fillText("🏠 RUMAH", 8, 30);
+      ctx.restore();
+    }
+
+    function drawBearSprite(x, y) {
+      if (!ctx) return;
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Ears
+      ctx.fillStyle = "#D97706";
+      ctx.beginPath(); ctx.arc(10, 8, 6.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(32, 8, 6.5, 0, Math.PI * 2); ctx.fill();
+
+      // Head
+      ctx.fillStyle = "#D97706";
+      ctx.strokeStyle = "#78350F";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.ellipse(21, 20, 15, 14, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+
+      // Snout
+      ctx.fillStyle = "#FEF3C7";
+      ctx.beginPath(); ctx.ellipse(21, 23, 7, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#1E293B";
+      ctx.beginPath(); ctx.arc(21, 21, 2.2, 0, Math.PI * 2); ctx.fill();
+
+      // Goggles
+      ctx.strokeStyle = "#1D4ED8";
+      ctx.lineWidth = 2.2;
+      ctx.fillStyle = "#BAE6FD";
+      ctx.beginPath(); ctx.roundRect(10, 14, 9, 8, [3]); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(23, 14, 9, 8, [3]); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(19, 18); ctx.lineTo(23, 18); ctx.stroke();
+
+      // Body (White Shirt)
+      ctx.fillStyle = "#FFFFFF";
+      ctx.strokeStyle = "#78350F";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.roundRect(11, 31, 20, 16, [4]); ctx.fill(); ctx.stroke();
+
+      // Red Shorts
+      ctx.fillStyle = "#DC2626";
+      ctx.beginPath(); ctx.roundRect(12, 44, 18, 10, [2]); ctx.fill(); ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawBattleArenaBackdrop() {
+      if (!ctx) return;
+      
+      // 1. Lush Green Jungle Floor (Land of Dawn)
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, "#2D5A27");
+      grad.addColorStop(0.5, "#3D7A33");
+      grad.addColorStop(1, "#1F421B");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. River Stream & Stone Bank on the Left
+      ctx.fillStyle = "#1B3B48";
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(85, 0);
+      ctx.bezierCurveTo(70, 90, 95, 180, 60, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // River Water shimmer
+      ctx.fillStyle = "rgba(56, 189, 248, 0.25)";
+      ctx.beginPath();
+      ctx.moveTo(0, 20);
+      ctx.bezierCurveTo(60, 70, 45, 160, 20, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Stone riverbank border
+      ctx.strokeStyle = "#64748B";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(85, 0);
+      ctx.bezierCurveTo(70, 90, 95, 180, 60, canvas.height);
+      ctx.stroke();
+
+      // 3. Stone Lane Pathway
+      ctx.fillStyle = "#828F74";
+      ctx.beginPath();
+      ctx.ellipse(190, 150, 130, 75, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#5C6752";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 4. Magic Altar / Golden Turret Rune Ring (Right Side)
+      ctx.save();
+      ctx.translate(285, 195);
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 48, 28, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = "#D97706";
+      ctx.beginPath();
+      ctx.arc(0, 0, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#FDE68A";
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 5. Mobile Legends SAVAGE Kill Banner at Top
+      ctx.save();
+      ctx.translate(canvas.width / 2, 24);
+
+      // Gold Wings
+      ctx.fillStyle = "#F59E0B";
+      ctx.beginPath();
+      ctx.moveTo(-115, 0); ctx.lineTo(-75, -12); ctx.lineTo(-60, 0); ctx.lineTo(-85, 10); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(115, 0); ctx.lineTo(75, -12); ctx.lineTo(60, 0); ctx.lineTo(85, 10); ctx.closePath(); ctx.fill();
+
+      // Banner Base
+      ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+      ctx.strokeStyle = "#F59E0B";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.roundRect(-75, -13, 150, 26, [8]);
+      ctx.fill();
+      ctx.stroke();
+
+      // Crystal Crest
+      ctx.fillStyle = "#38BDF8";
+      ctx.beginPath();
+      ctx.moveTo(0, -18); ctx.lineTo(7, -10); ctx.lineTo(0, -4); ctx.lineTo(-7, -10); ctx.closePath();
+      ctx.fill();
+
+      // SAVAGE Text
+      ctx.font = "900 13px 'Fredoka', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#FDE68A";
+      ctx.shadowColor = "#F59E0B";
+      ctx.shadowBlur = 8;
+      ctx.fillText("⚔️ SAVAGE ⚔️", 0, 0);
+      ctx.shadowBlur = 0;
+
+      // Small Score Kill Badge
+      ctx.fillStyle = "#FEF08A";
+      ctx.font = "bold 10px monospace";
+      ctx.fillText("160", 94, 2);
+
+      ctx.restore();
+    }
+
+    function drawZilongSprite(x, y) {
+      if (!ctx) return;
+      ctx.save();
+      ctx.translate(x, y);
+
+      // 1. Mobile Legends Overhead Health Bar & Name Plate
+      ctx.save();
+      ctx.translate(14, -22);
+
+      // Level 15 Circle Icon
+      ctx.fillStyle = "#0F172A";
+      ctx.strokeStyle = "#F59E0B";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(-18, 0, 7.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "bold 8.5px Nunito";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("15", -18, 0.5);
+
+      // Segmented Green HP Bar
+      ctx.fillStyle = "#0F172A";
+      ctx.fillRect(-8, -4.5, 42, 6);
+      ctx.fillStyle = "#22C55E";
+      ctx.fillRect(-7, -3.5, 40, 4);
+      // Segment divisions
+      ctx.fillStyle = "#064E3B";
+      for (let s = 1; s < 4; s++) {
+        ctx.fillRect(-7 + s * 10, -3.5, 1, 4);
+      }
+
+      // Small Mana Bar
+      ctx.fillStyle = "#38BDF8";
+      ctx.fillRect(-7, 1.5, 34, 1.8);
+
+      // Name Tag: "Zilong"
+      ctx.fillStyle = "#F1F5F9";
+      ctx.font = "bold 8px 'Fredoka', sans-serif";
+      ctx.fillText("Zilong", 12, -9);
+      ctx.restore();
+
+      // 2. High Flying Crimson Cape
+      ctx.fillStyle = "#DC2626";
+      ctx.strokeStyle = "#991B1B";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(10, 16);
+      ctx.quadraticCurveTo(-10, 32, -4, 52);
+      ctx.lineTo(24, 46);
+      ctx.lineTo(20, 16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 3. Zilong Body Armor (Silver-Cyan with Gold Dragon Trim)
+      ctx.fillStyle = "#0284C7";
+      ctx.strokeStyle = "#F59E0B";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.roundRect(8, 16, 20, 24, [4]);
+      ctx.fill();
+      ctx.stroke();
+
+      // Gold Chest Dragon Emblem
+      ctx.fillStyle = "#FDE68A";
+      ctx.beginPath();
+      ctx.moveTo(18, 19); ctx.lineTo(23, 27); ctx.lineTo(13, 27); ctx.closePath();
+      ctx.fill();
+
+      // Gold Pauldrons (Shoulder Guards)
+      ctx.fillStyle = "#F59E0B";
+      ctx.beginPath(); ctx.ellipse(7, 18, 5, 4, -0.4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(28, 18, 5, 4, 0.4, 0, Math.PI * 2); ctx.fill();
+
+      // 4. Head, Face & Hair
+      ctx.fillStyle = "#1E293B"; // Long dark ponytail
+      ctx.beginPath();
+      ctx.moveTo(14, 8);
+      ctx.quadraticCurveTo(0, 0, -6, 22);
+      ctx.quadraticCurveTo(2, 14, 14, 12);
+      ctx.fill();
+
+      // Face
+      ctx.fillStyle = "#FED7AA";
+      ctx.beginPath(); ctx.arc(18, 11, 6, 0, Math.PI * 2); ctx.fill();
+
+      // Golden Dragon Headband / Circlet
+      ctx.fillStyle = "#F59E0B";
+      ctx.beginPath();
+      ctx.rect(13, 6, 11, 3.5);
+      ctx.fill();
+      // Red Forehead Gem
+      ctx.fillStyle = "#EF4444";
+      ctx.beginPath(); ctx.arc(18.5, 7.5, 1.6, 0, Math.PI * 2); ctx.fill();
+
+      // 5. Great Dragon Spear (Tombak Naga)
+      ctx.save();
+      ctx.strokeStyle = "#94A3B8";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(35, -14);
+      ctx.lineTo(24, 48);
+      ctx.stroke();
+
+      // Spear Red Tassel
+      ctx.fillStyle = "#DC2626";
+      ctx.beginPath();
+      ctx.arc(33, -7, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing Cyan Dragon Spear Blade
+      ctx.fillStyle = "#38BDF8";
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 1;
+      ctx.shadowColor = "#38BDF8";
+      ctx.shadowBlur = 9;
+      ctx.beginPath();
+      ctx.moveTo(35, -14);
+      ctx.lineTo(43, -27);
+      ctx.lineTo(31, -22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    function showStageToast(text) {
+      const toast = document.getElementById('stageToast');
+      if (!toast) return;
+      toast.textContent = text;
+      toast.style.opacity = '1';
+      setTimeout(() => { if (toast) toast.style.opacity = '0'; }, 1800);
+    }
+
+    function updateWatchers() {
+      const scoreVal = document.getElementById('scoreVal');
+      const xPosVal = document.getElementById('xPosVal');
+      const yPosVal = document.getElementById('yPosVal');
+      const carLoopVal = document.getElementById('carLoopVal');
+      const bearStatusVal = document.getElementById('bearStatusVal');
+
+      if (scoreVal) scoreVal.textContent = curScore;
+      if (currentQuestionIndex === 2 && xPosVal) {
+        xPosVal.textContent = Math.round(tobyX - 150);
+      } else if (currentQuestionIndex === 3 && xPosVal && carLoopVal) {
+        xPosVal.textContent = Math.round(carX);
+        carLoopVal.textContent = carLoopCount;
+      } else if (currentQuestionIndex === 4 && bearStatusVal) {
+        if (bearExecutionPhase === 0) bearStatusVal.textContent = "Di Awal";
+        else if (bearExecutionPhase === 1) bearStatusVal.textContent = "Langkah 1";
+        else if (bearExecutionPhase === 2) bearStatusVal.textContent = "Melompat!";
+        else if (bearExecutionPhase === 3) bearStatusVal.textContent = "Langkah 2";
+        else if (bearExecutionPhase === 4) bearStatusVal.textContent = "Tiba di Rumah! 🏠";
+      }
+    }
+
+    // EKSEKUSI LANGKAH GERAK INSTAN
+    function executeMovementStep(dirX, dirY) {
+      const slots = getActiveSlots();
+
+      if (currentQuestionIndex === 0) {
+        // Soal 1: Zilong Land of Dawn
+        const pairs = [
+          { c: slots.q5_cond1, b: slots.q5_body1 },
+          { c: slots.q5_cond2, b: slots.q5_body2 },
+          { c: slots.q5_cond3, b: slots.q5_body3 },
+          { c: slots.q5_cond4, b: slots.q5_body4 }
+        ];
+
+        let hasMoved = false;
+        pairs.forEach(p => {
+          if (dirX === 1 && p.c === 'key_right_arrow') { execZilongMotion(p.b); hasMoved = true; }
+          if (dirX === -1 && p.c === 'key_left_arrow') { execZilongMotion(p.b); hasMoved = true; }
+          if (dirY === 1 && p.c === 'key_up_arrow') { execZilongMotion(p.b); hasMoved = true; }
+          if (dirY === -1 && p.c === 'key_down_arrow') { execZilongMotion(p.b); hasMoved = true; }
+        });
+
+        if (!hasMoved) {
+          showStageToast("ℹ️ Pasang balok tombol panah & gerak yang sesuai di lembar kode terlebih dahulu!");
+        }
+
+        if (zilongX < 15) zilongX = 15;
+        if (zilongX > canvas.width - 45) zilongX = canvas.width - 45;
+        if (zilongY < 35) zilongY = 35;
+        if (zilongY > canvas.height - 55) zilongY = canvas.height - 55;
+      }
+      else if (currentQuestionIndex === 1) {
+        // Soal 2: Toby Menangkap Bintang & Bom
+        if (slots.outsideSlot === 'stop_all') {
+          showStageToast("💥 ERROR: 'stop all' di luar percabangan membuat game macet!");
+          audio.playError();
+          return;
+        }
+        tobyX += dirX * 12;
+        if (tobyX < 5) tobyX = 5;
+        if (tobyX > canvas.width - 45) tobyX = canvas.width - 45;
+        audio.playTone(380, 'sine', 0.04, 0.08);
+      }
+      else if (currentQuestionIndex === 2) {
+        // Soal 3: Toby Arah Gerak Terbalik
+        if (dirX === 1) {
+          if (slots.cond1 === 'key_right_arrow') execMotionAction(slots.body1);
+          if (slots.cond2 === 'key_right_arrow') execMotionAction(slots.body2);
+        } else if (dirX === -1) {
+          if (slots.cond1 === 'key_left_arrow') execMotionAction(slots.body1);
+          if (slots.cond2 === 'key_left_arrow') execMotionAction(slots.body2);
+        }
+        if (tobyX < 5) tobyX = 5;
+        if (tobyX > canvas.width - 45) tobyX = canvas.width - 45;
+      }
+
+      updateWatchers();
+      if (!isGameRunning) renderStaticStage();
+    }
+
+    let holdMoveInterval = null;
+
+    function bindDirectionButton(btnId, dirX, dirY) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+
+      const handlePress = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        audio.init();
+        triggerHaptic(25);
+        if (!isGameRunning) {
+          startSimulation();
+        }
+        moveDirection = dirX;
+        moveDirY = dirY;
+        executeMovementStep(dirX, dirY);
+
+        if (holdMoveInterval) clearInterval(holdMoveInterval);
+        holdMoveInterval = setInterval(() => {
+          executeMovementStep(dirX, dirY);
+        }, 70);
+      };
+
+      const handleRelease = (e) => {
+        if (e) {
+          e.preventDefault();
+        }
+        if (holdMoveInterval) {
+          clearInterval(holdMoveInterval);
+          holdMoveInterval = null;
+        }
+        moveDirection = 0;
+        moveDirY = 0;
+      };
+
+      btn.addEventListener('pointerdown', handlePress);
+      btn.addEventListener('pointerup', handleRelease);
+      btn.addEventListener('pointerleave', handleRelease);
+      btn.addEventListener('pointercancel', handleRelease);
+      btn.addEventListener('touchstart', handlePress, { passive: false });
+      btn.addEventListener('touchend', handleRelease, { passive: false });
+      btn.addEventListener('touchcancel', handleRelease, { passive: false });
+      btn.addEventListener('mousedown', handlePress);
+      btn.addEventListener('mouseup', handleRelease);
+    }
+
+    // HANDLER GERAK TOMBOL SENTUH & AUTO-START SIMULASI
+    function handleDirectionDown(dirX, dirY, event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      audio.init();
+
+      // Jika panggung belum jalan, otomatis mulai simulasi agar tombol langsung bekerja!
+      if (!isGameRunning) {
+        startSimulation();
+      }
+
+      if (dirX !== 0) moveDirection = dirX;
+      if (dirY !== 0) moveDirY = dirY;
+      triggerHaptic(25);
+    }
+
+    function handleDirectionUp(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      moveDirection = 0;
+      moveDirY = 0;
+    }
+
+    function startMove(dir) {
+      handleDirectionDown(dir, 0);
+    }
+    function stopMove() {
+      handleDirectionUp();
+    }
+    function startMoveY(dir) {
+      handleDirectionDown(0, dir);
+    }
+    function stopMoveY() {
+      handleDirectionUp();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      audio.init();
+      if (!isGameRunning && (e.key.startsWith('Arrow') || ['a','d','w','s'].includes(e.key.toLowerCase()))) {
+        startSimulation();
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveDirection = -1;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveDirection = 1;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') moveDirY = 1;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') moveDirY = -1;
+    });
+    window.addEventListener('keyup', (e) => {
+      if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && moveDirection === -1) moveDirection = 0;
+      if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && moveDirection === 1) moveDirection = 0;
+      if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') && moveDirY === 1) moveDirY = 0;
+      if ((e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') && moveDirY === -1) moveDirY = 0;
+    });
+
+    function togglePlaySimulation() {
+      audio.init();
+      if (isGameRunning) {
+        stopSimulation();
+      } else {
+        startSimulation();
+      }
+    }
+
+    function stopSimulation() {
+      isGameRunning = false;
+      if (animId) {
+        cancelAnimationFrame(animId);
+        animId = null;
+      }
+      moveDirection = 0;
+      moveDirY = 0;
+      if (holdMoveInterval) {
+        clearInterval(holdMoveInterval);
+        holdMoveInterval = null;
+      }
+      const flagBtn = document.getElementById('greenFlagBtn');
+      if (flagBtn) flagBtn.classList.remove('ring-4', 'ring-emerald-300');
+      renderStaticStage();
+      showStageToast("🛑 PictoBlox Dihentikan");
+    }
+
+    function startSimulation() {
+      const slots = getActiveSlots();
+      isGameRunning = true;
+      const flagBtn = document.getElementById('greenFlagBtn');
+      if (flagBtn) flagBtn.classList.add('ring-4', 'ring-emerald-300');
+      curScore = 0;
+      fallingItems = [];
+      gameTicks = 0;
+      carX = -240;
+      carLoopCount = 0;
+
+      bearX = 40;
+      bearY = 195;
+      bearJumpProgress = 0;
+      bearExecutionPhase = 0;
+      bearStepTimer = 0;
+
+      zilongX = 160;
+      zilongY = 135;
+
+      updateWatchers();
+      audio.playGrab();
+
+      if (currentQuestionIndex === 1 && slots.outsideSlot === 'stop_all') {
+        showStageToast("💥 ERROR: 'stop all' di luar percabangan membuat game langsung macet!");
+        audio.playError();
+        stopSimulation();
+        return;
+      }
+
+      showStageToast("🟢 PictoBlox Berjalan!");
+      runGameLoop();
+    }
+
+    function runGameLoop() {
+      if (!isGameRunning || !ctx) return;
+      gameTicks++;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const slots = getActiveSlots();
+
+      if (currentQuestionIndex === 0) {
+        // Soal 1: Zilong Land of Dawn Battlefield 4-Way
+        drawBattleArenaBackdrop();
+
+        const pairs = [
+          { c: slots.q5_cond1, b: slots.q5_body1 },
+          { c: slots.q5_cond2, b: slots.q5_body2 },
+          { c: slots.q5_cond3, b: slots.q5_body3 },
+          { c: slots.q5_cond4, b: slots.q5_body4 }
+        ];
+
+        pairs.forEach(p => {
+          if (moveDirection === 1 && p.c === 'key_right_arrow') execZilongMotion(p.b);
+          if (moveDirection === -1 && p.c === 'key_left_arrow') execZilongMotion(p.b);
+          if (moveDirY === 1 && p.c === 'key_up_arrow') execZilongMotion(p.b);
+          if (moveDirY === -1 && p.c === 'key_down_arrow') execZilongMotion(p.b);
+        });
+
+        if (zilongX < 15) zilongX = 15;
+        if (zilongX > canvas.width - 45) zilongX = canvas.width - 45;
+        if (zilongY < 35) zilongY = 35;
+        if (zilongY > canvas.height - 55) zilongY = canvas.height - 55;
+
+        drawZilongSprite(zilongX, zilongY);
+      }
+      else if (currentQuestionIndex === 1) {
+        // Soal 2: Toby catching stars/bombs
+        ctx.fillStyle = "#0F172A";
+        ctx.fillRect(0, 245, canvas.width, 25);
+
+        tobyX += moveDirection * 4.5;
+        if (tobyX < 5) tobyX = 5;
+        if (tobyX > canvas.width - 45) tobyX = canvas.width - 45;
+
+        if (gameTicks % 50 === 0) {
+          fallingItems.push({
+            x: Math.random() * (canvas.width - 40) + 10,
+            y: -20,
+            speed: 2.5,
+            kind: Math.random() > 0.4 ? 'star' : 'bomb'
+          });
+        }
+
+        for (let i = fallingItems.length - 1; i >= 0; i--) {
+          const it = fallingItems[i];
+          it.y += it.speed;
+
+          ctx.font = "20px sans-serif";
+          ctx.fillText(it.kind === 'star' ? "🌟" : "💣", it.x, it.y);
+
+          if (it.y > tobyY - 10 && it.y < tobyY + 30 && it.x > tobyX - 10 && it.x < tobyX + 40) {
+            handleCatchCollision(it.kind, slots);
+            fallingItems.splice(i, 1);
+            if (!isGameRunning) return;
+            continue;
+          }
+          if (it.y > canvas.height + 20) {
+            fallingItems.splice(i, 1);
+          }
+        }
+        drawStageToby(tobyX, tobyY);
+      } 
+      else if (currentQuestionIndex === 2) {
+        // Soal 3: Arrow key motion
+        ctx.fillStyle = "#0F172A";
+        ctx.fillRect(0, 245, canvas.width, 25);
+
+        if (moveDirection === 1) {
+          if (slots.cond1 === 'key_right_arrow') execMotionAction(slots.body1);
+          if (slots.cond2 === 'key_right_arrow') execMotionAction(slots.body2);
+        } else if (moveDirection === -1) {
+          if (slots.cond1 === 'key_left_arrow') execMotionAction(slots.body1);
+          if (slots.cond2 === 'key_left_arrow') execMotionAction(slots.body2);
+        }
+
+        if (tobyX < 5) tobyX = 5;
+        if (tobyX > canvas.width - 45) tobyX = canvas.width - 45;
+
+        drawStageToby(tobyX, tobyY);
+      }
+      else if (currentQuestionIndex === 3) {
+        // Soal 4: Looping car
+        drawCityBackdrop();
+        if (slots.outsideSlot === 'change_x_plus_10') carX += 3.5;
+        if (slots.outsideSlot === 'change_x_minus_10') carX -= 3.5;
+
+        const touchingLine = (carX >= 230);
+        if (touchingLine) {
+          if ((slots.cond1 === 'touching_line' && slots.body1 === 'set_x_minus_240') ||
+              (slots.cond2 === 'touching_line' && slots.body2 === 'set_x_minus_240')) {
+            carX = -240;
+            carLoopCount++;
+            audio.playSnap();
+            showStageToast("🔄 Mobil menyentuh garis dan kembali ke awal (x = -240)!");
+          } else if (slots.body1 === 'trap_set_x_plus_240') {
+            carX = 230;
+          }
+        }
+
+        if (carX > 320 && carX < 335) {
+          showStageToast("⚠️ Mobil bablas melewati garis dan menghilang dari layar!");
+          audio.playError();
+        }
+
+        if (carX < -260) carX = -260;
+        drawGreenConvertibleCar(carX, carY);
+      }
+      else if (currentQuestionIndex === 4) {
+        // Soal 5: Sequential Bear Adventure
+        drawForestBackdrop();
+        const seq = [slots.seq1, slots.seq2, slots.seq3];
+
+        if (bearExecutionPhase === 0) {
+          bearExecutionPhase = 1;
+          bearStepTimer = 0;
+        }
+
+        if (bearExecutionPhase === 1) {
+          bearStepTimer++;
+          if (seq[0] === 'move_50_steps') {
+            if (bearX < 110) bearX += 2;
+            if (bearStepTimer > 35) {
+              bearExecutionPhase = 2;
+              bearStepTimer = 0;
+            }
+          } else if (seq[0] === 'trap_move_minus_50') {
+            bearX -= 1.5;
+            showStageToast("⚠️ Bear mundur menjauhi rute!");
+          } else if (seq[0] === 'jump') {
+            bearY = 195 - Math.sin((bearStepTimer / 30) * Math.PI) * 45;
+            if (bearStepTimer > 30) {
+              bearY = 195;
+              bearExecutionPhase = 2;
+              bearStepTimer = 0;
+            }
+          } else {
+            if (bearStepTimer > 25) {
+              showStageToast("⚠️ Balok pertama belum dipasang / salah!");
+              stopSimulation();
+              return;
+            }
+          }
+        }
+        else if (bearExecutionPhase === 2) {
+          bearStepTimer++;
+          if (seq[1] === 'jump') {
+            bearJumpProgress = bearStepTimer / 45;
+            bearX = 110 + bearJumpProgress * 100;
+            bearY = 195 - Math.sin(bearJumpProgress * Math.PI) * 60;
+
+            if (bearStepTimer === 1) audio.playTone(600, 'triangle', 0.2, 0.2);
+
+            if (bearStepTimer >= 45) {
+              bearY = 195;
+              bearX = 210;
+              bearExecutionPhase = 3;
+              bearStepTimer = 0;
+              audio.playSnap();
+            }
+          } else if (seq[1] === 'move_50_steps') {
+            bearX += 1.5;
+            if (bearX >= 140) {
+              audio.playBomb();
+              showStageToast("💥 ADUH! Bear menabrak batu karena tidak melompat (jump)!");
+              stopSimulation();
+              return;
+            }
+          } else {
+            if (bearStepTimer > 25) {
+              showStageToast("⚠️ Balok kedua harus melompati batu!");
+              stopSimulation();
+              return;
+            }
+          }
+        }
+        else if (bearExecutionPhase === 3) {
+          bearStepTimer++;
+          if (seq[2] === 'move_50_steps') {
+            if (bearX < 275) bearX += 2;
+            if (bearStepTimer > 35) {
+              bearExecutionPhase = 4;
+              bearStepTimer = 0;
+              audio.playVictory();
+              showStageToast("🎉 Hore! Bear berhasil tiba di rumah dengan selamat!");
+              try { confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); } catch(e) {}
+            }
+          } else {
+            if (bearStepTimer > 25) {
+              showStageToast("⚠️ Balok ketiga belum membuat Bear melangkah ke rumah!");
+              stopSimulation();
+              return;
+            }
+          }
+        }
+        drawBearSprite(bearX, bearY);
+      }
+
+      updateWatchers();
+      animId = requestAnimationFrame(runGameLoop);
+    }
+
+    function execZilongMotion(bodyAction) {
+      if (bodyAction === 'change_x_plus_10' || bodyAction === 'trap_change_x_up') {
+        zilongX += 3.5;
+        audio.playTone(450, 'sine', 0.03, 0.05);
+      } else if (bodyAction === 'change_x_minus_10') {
+        zilongX -= 3.5;
+        audio.playTone(380, 'sine', 0.03, 0.05);
+      } else if (bodyAction === 'change_y_plus_10' || bodyAction === 'trap_change_y_right') {
+        zilongY -= 3.5; // Up on canvas
+        audio.playTone(520, 'sine', 0.03, 0.05);
+      } else if (bodyAction === 'change_y_minus_10') {
+        zilongY += 3.5; // Down on canvas
+        audio.playTone(320, 'sine', 0.03, 0.05);
+      } else if (bodyAction === 'trap_set_x_10') {
+        zilongX = 180; // Stuck
+      }
+    }
+
+    function handleCatchCollision(kind, slots) {
+      if (kind === 'star') {
+        if ((slots.cond1 === 'touching_star' && slots.body1 === 'change_score_1') ||
+            (slots.cond2 === 'touching_star' && slots.body2 === 'change_score_1')) {
+          curScore++;
+          audio.playStar();
+          showStageToast("⭐ score +1!");
+        } else if (slots.body1 === 'trap_set_score_1' || slots.body2 === 'trap_set_score_1') {
+          curScore = 1;
+          showStageToast("⭐ set score to 1 (statis)");
+        }
+      } else if (kind === 'bomb') {
+        if ((slots.cond1 === 'touching_bomb' && slots.body1 === 'stop_all') ||
+            (slots.cond2 === 'touching_bomb' && slots.body2 === 'stop_all')) {
+          audio.playBomb();
+          showStageToast("💣 STOP ALL: Game Berhenti Total!");
+          stopSimulation();
+        }
+      }
+    }
+
+    function execMotionAction(actionId) {
+      if (actionId === 'change_x_plus_10') {
+        tobyX += 4;
+        audio.playTone(400, 'sine', 0.04, 0.08);
+      } else if (actionId === 'change_x_minus_10') {
+        tobyX -= 4;
+        audio.playTone(320, 'sine', 0.04, 0.08);
+      }
+    }
+
+    function renderStaticStage() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (currentQuestionIndex === 0) {
+        drawBattleArenaBackdrop();
+        drawZilongSprite(zilongX, zilongY);
+      } else if (currentQuestionIndex === 1 || currentQuestionIndex === 2) {
+        ctx.fillStyle = "#0F172A";
+        ctx.fillRect(0, 245, canvas.width, 25);
+        drawStageToby(tobyX, tobyY);
+      } else if (currentQuestionIndex === 3) {
+        drawCityBackdrop();
+        drawGreenConvertibleCar(carX, carY);
+      } else if (currentQuestionIndex === 4) {
+        drawForestBackdrop();
+        drawBearSprite(bearX, bearY);
+      }
+      updateWatchers();
+    }
+  </script>
+
+  <!-- JAVASCRIPT: LOGIC EVALUATION, REFLECTION & EXAM SUBMISSION -->
+  <script>
+    let isCurrentCodeFixed = false;
+    let questionCodeSolved = [false, false, false, false, false];
+
+    function countWords(str) {
+      return str.trim().split(/\s+/).filter(w => w.length > 0).length;
+    }
+
+    function evaluateLogicStatus() {
+      const q = getActiveQuestion();
+      const slots = getActiveSlots();
+      isCurrentCodeFixed = q.validator(slots);
+
+      const evalBadge = document.getElementById('evalBadge');
+      const explanationInput = document.getElementById('studentExplanationInput');
+      const panelIcon = document.getElementById('panelStateIcon');
+      const reflectionPanel = document.getElementById('reflectionPanelContainer');
+
+      if (isCurrentCodeFixed) {
+        // Efek Suara, Animasi Konfeti & Notifikasi saat balok pertama kali berhasil dipecahkan
+        if (!questionCodeSolved[currentQuestionIndex]) {
+          questionCodeSolved[currentQuestionIndex] = true;
+          audio.playSolveChime();
+          triggerHaptic(60);
+          try {
+            confetti({
+              particleCount: 90,
+              spread: 70,
+              origin: { y: 0.6 }
+            });
+          } catch(e) {}
+          showStageToast("🎉 Kode Berhasil Dipecahkan! Silakan tulis refleksi analisismu ✍️");
+          if (explanationInput) {
+            setTimeout(() => explanationInput.focus(), 200);
+          }
+        }
+
+        if (evalBadge) {
+          evalBadge.textContent = "Kode Berhasil Disusun / Diperbaiki! ✅";
+          evalBadge.className = "text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300";
+        }
+        if (panelIcon) panelIcon.textContent = "🔓";
+        if (explanationInput) {
+          explanationInput.disabled = false;
+          explanationInput.placeholder = q.reflectionPrompt;
+        }
+        if (reflectionPanel) {
+          reflectionPanel.classList.remove('border-slate-700');
+          reflectionPanel.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-500/30');
+        }
+      } else {
+        questionCodeSolved[currentQuestionIndex] = false;
+        if (evalBadge) {
+          evalBadge.textContent = "Kode Belum Lengkap / Error ❌";
+          evalBadge.className = "text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200";
+        }
+        if (panelIcon) panelIcon.textContent = "🔒";
+        if (explanationInput) {
+          explanationInput.disabled = true;
+          explanationInput.placeholder = "🔒 Selesaikan perbaikan/penyusunan balok kode di samping terlebih dahulu...";
+        }
+        if (reflectionPanel) {
+          reflectionPanel.classList.remove('border-emerald-500', 'ring-2', 'ring-emerald-500/30');
+          reflectionPanel.classList.add('border-slate-700');
+        }
+      }
+      checkProgressionGate();
+    }
+
+    function checkProgressionGate() {
+      const explanationInput = document.getElementById('studentExplanationInput');
+      const wordCounter = document.getElementById('wordCounter');
+      const wordStatusNotice = document.getElementById('wordStatusNotice');
+      const wordSuccessNotice = document.getElementById('wordSuccessNotice');
+      const wordShortage = document.getElementById('wordShortage');
+      const nextBtn = document.getElementById('btn-next-challenge');
+
+      if (!explanationInput || !nextBtn) return;
+      const text = explanationInput.value;
+      studentReflections[currentQuestionIndex] = text;
+      const words = countWords(text);
+
+      if (wordCounter) wordCounter.textContent = words;
+
+      if (!isCurrentCodeFixed) {
+        nextBtn.disabled = true;
+        nextBtn.className = "mt-2.5 w-full py-2 bg-slate-700 text-slate-500 font-brand font-bold text-xs rounded-xl shadow cursor-not-allowed";
+        if (wordStatusNotice) wordStatusNotice.classList.add('hidden');
+        if (wordSuccessNotice) wordSuccessNotice.classList.add('hidden');
+        return;
+      }
+
+      if (words < 20) {
+        const diff = 20 - words;
+        if (wordShortage) wordShortage.textContent = diff;
+        if (wordStatusNotice) wordStatusNotice.classList.remove('hidden');
+        if (wordSuccessNotice) wordSuccessNotice.classList.add('hidden');
+        if (wordCounter) wordCounter.className = "text-rose-400 font-mono";
+
+        nextBtn.disabled = true;
+        nextBtn.className = "mt-2.5 w-full py-2 bg-slate-700 text-slate-500 font-brand font-bold text-xs rounded-xl shadow cursor-not-allowed";
+      } else {
+        if (wordStatusNotice) wordStatusNotice.classList.add('hidden');
+        if (wordSuccessNotice) wordSuccessNotice.classList.remove('hidden');
+        if (wordCounter) wordCounter.className = "text-emerald-400 font-mono";
+
+        nextBtn.disabled = false;
+        nextBtn.className = "mt-2.5 w-full py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-brand font-bold text-xs rounded-xl shadow-lg transition cursor-pointer shadow-indigo-500/30";
+      }
+    }
+
+    function switchQuestion(newIdx) {
+      if (newIdx === currentQuestionIndex) return;
+      stopSimulation();
+
+      const explanationInput = document.getElementById('studentExplanationInput');
+      if (explanationInput) studentReflections[currentQuestionIndex] = explanationInput.value;
+
+      currentQuestionIndex = newIdx;
+      const q = getActiveQuestion();
+
+      // Update Header Text
+      const caseIcon = document.getElementById('caseIcon');
+      const caseTitleBadge = document.getElementById('caseTitleBadge');
+      const caseDescription = document.getElementById('caseDescription');
+      const workspaceQuestionLabel = document.getElementById('workspaceQuestionLabel');
+      const stageTargetSubtext = document.getElementById('stageTargetSubtext');
+      const reflectionQuestionLabel = document.getElementById('reflectionQuestionLabel');
+      const nextBtnLabel = document.getElementById('nextBtnLabel');
+
+      if (caseIcon) caseIcon.textContent = q.icon;
+      if (caseTitleBadge) caseTitleBadge.textContent = q.title;
+      if (caseDescription) caseDescription.innerHTML = q.description;
+      if (workspaceQuestionLabel) workspaceQuestionLabel.textContent = q.name;
+      if (stageTargetSubtext) stageTargetSubtext.textContent = q.subtext;
+      if (reflectionQuestionLabel) reflectionQuestionLabel.textContent = q.name;
+
+      if (nextBtnLabel) {
+        if (currentQuestionIndex === 0) nextBtnLabel.textContent = "Lanjut ke Soal Berikutnya (Soal 2)";
+        else if (currentQuestionIndex === 1) nextBtnLabel.textContent = "Lanjut ke Soal Berikutnya (Soal 3)";
+        else if (currentQuestionIndex === 2) nextBtnLabel.textContent = "Lanjut ke Soal Berikutnya (Soal 4)";
+        else if (currentQuestionIndex === 3) nextBtnLabel.textContent = "Lanjut ke Soal Berikutnya (Soal 5)";
+        else nextBtnLabel.textContent = "Kirim Semua Jawaban ke Guru 🚀";
+      }
+
+      // Tabs highlight
+      ['tabQ1', 'tabQ2', 'tabQ3', 'tabQ4', 'tabQ5'].forEach((tId, idx) => {
+        const btn = document.getElementById(tId);
+        if (btn) {
+          if (idx === currentQuestionIndex) {
+            btn.className = "px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 bg-indigo-600 text-white shadow";
+          } else {
+            btn.className = "px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 text-slate-400 hover:text-white";
+          }
+        }
+      });
+
+      // Watcher & button displays
+      const watcherScore = document.getElementById('watcherScore');
+      const watcherXPos = document.getElementById('watcherXPos');
+      const watcherYPos = document.getElementById('watcherYPos');
+      const watcherCarLoop = document.getElementById('watcherCarLoop');
+      const watcherBearStatus = document.getElementById('watcherBearStatus');
+      const watcherXPosLabel = document.getElementById('watcherXPosLabel');
+      const stageTouchButtons = document.getElementById('stageTouchButtons');
+      const stageDPadButtons = document.getElementById('stageDPadButtons');
+
+      if (currentQuestionIndex === 0) {
+        // Soal 1: Zilong Savage 4-Way
+        if (watcherScore) watcherScore.classList.add('hidden');
+        if (watcherXPos) watcherXPos.classList.add('hidden');
+        if (watcherYPos) watcherYPos.classList.add('hidden');
+        if (watcherCarLoop) watcherCarLoop.classList.add('hidden');
+        if (watcherBearStatus) watcherBearStatus.classList.add('hidden');
+        if (stageTouchButtons) {
+          stageTouchButtons.classList.add('hidden');
+          stageTouchButtons.classList.remove('flex');
+        }
+        if (stageDPadButtons) {
+          stageDPadButtons.classList.remove('hidden');
+          stageDPadButtons.classList.add('flex');
+        }
+      } else if (currentQuestionIndex === 1) {
+        // Soal 2: Toby catching star/bomb
+        if (watcherScore) watcherScore.classList.remove('hidden');
+        if (watcherXPos) watcherXPos.classList.add('hidden');
+        if (watcherYPos) watcherYPos.classList.add('hidden');
+        if (watcherCarLoop) watcherCarLoop.classList.add('hidden');
+        if (watcherBearStatus) watcherBearStatus.classList.add('hidden');
+        if (stageTouchButtons) {
+          stageTouchButtons.classList.remove('hidden');
+          stageTouchButtons.classList.add('flex');
+        }
+        if (stageDPadButtons) {
+          stageDPadButtons.classList.add('hidden');
+          stageDPadButtons.classList.remove('flex');
+        }
+      } else if (currentQuestionIndex === 2) {
+        // Soal 3: Arrow motion (Toby pos x)
+        if (watcherScore) watcherScore.classList.add('hidden');
+        if (watcherXPos) watcherXPos.classList.remove('hidden');
+        if (watcherYPos) watcherYPos.classList.add('hidden');
+        if (watcherCarLoop) watcherCarLoop.classList.add('hidden');
+        if (watcherBearStatus) watcherBearStatus.classList.add('hidden');
+        if (watcherXPosLabel) watcherXPosLabel.textContent = "📍 pos x:";
+        if (stageTouchButtons) {
+          stageTouchButtons.classList.remove('hidden');
+          stageTouchButtons.classList.add('flex');
+        }
+        if (stageDPadButtons) {
+          stageDPadButtons.classList.add('hidden');
+          stageDPadButtons.classList.remove('flex');
+        }
+      } else if (currentQuestionIndex === 3) {
+        // Soal 4: Car looping
+        if (watcherScore) watcherScore.classList.add('hidden');
+        if (watcherXPos) watcherXPos.classList.remove('hidden');
+        if (watcherYPos) watcherYPos.classList.add('hidden');
+        if (watcherCarLoop) watcherCarLoop.classList.remove('hidden');
+        if (watcherBearStatus) watcherBearStatus.classList.add('hidden');
+        if (watcherXPosLabel) watcherXPosLabel.textContent = "🚗 car x:";
+        if (stageTouchButtons) {
+          stageTouchButtons.classList.add('hidden');
+          stageTouchButtons.classList.remove('flex');
+        }
+        if (stageDPadButtons) {
+          stageDPadButtons.classList.add('hidden');
+          stageDPadButtons.classList.remove('flex');
+        }
+      } else if (currentQuestionIndex === 4) {
+        // Soal 5: Bear adventure
+        if (watcherScore) watcherScore.classList.add('hidden');
+        if (watcherXPos) watcherXPos.classList.add('hidden');
+        if (watcherYPos) watcherYPos.classList.add('hidden');
+        if (watcherCarLoop) watcherCarLoop.classList.add('hidden');
+        if (watcherBearStatus) watcherBearStatus.classList.remove('hidden');
+        if (stageTouchButtons) {
+          stageTouchButtons.classList.add('hidden');
+          stageTouchButtons.classList.remove('flex');
+        }
+        if (stageDPadButtons) {
+          stageDPadButtons.classList.add('hidden');
+          stageDPadButtons.classList.remove('flex');
+        }
+      }
+
+      tobyX = 150;
+      carX = -240;
+      carLoopCount = 0;
+      bearX = 40;
+      bearY = 195;
+      bearExecutionPhase = 0;
+      zilongX = 160;
+      zilongY = 135;
+      moveDirection = 0;
+      moveDirY = 0;
+
+      if (explanationInput) explanationInput.value = studentReflections[currentQuestionIndex] || "";
+
+      renderPalette();
+      renderWorkspaceScript();
+      renderStaticStage();
+      audio.playGrab();
+    }
+
+    function calculateFinalExamScore() {
+      let totalScore = 0;
+      const breakdown = [];
+
+      QUESTIONS_DATA.forEach((q, idx) => {
+        const slots = userSlotPerQuestion[idx];
+        const isCodeValid = q.validator(slots);
+        const words = countWords(studentReflections[idx] || "");
+        let qScore = 0;
+
+        // Tiap soal bernilai maksimal 20 poin:
+        // 14 poin untuk perbaikan/penyusunan kode benar
+        // 6 poin untuk refleksi nalar >= 20 kata
+        if (isCodeValid) qScore += 14;
+        if (words >= 20) qScore += 6;
+
+        totalScore += qScore;
+        breakdown.push({
+          questionId: idx + 1,
+          questionName: q.name,
+          codeValid: isCodeValid,
+          wordCount: words,
+          score: qScore,
+          reflection: studentReflections[idx] || ""
+        });
+      });
+
+      return { totalScore, breakdown };
+    }
+
+    async function sendExamResultsToGoogleSheets(payload) {
+      console.log("Mengirim data ujian siswa ke Google Sheets:", payload);
+      try {
+        if (GOOGLE_SHEETS_WEB_APP_URL && !GOOGLE_SHEETS_WEB_APP_URL.includes("example_endpoint")) {
+          await fetch(GOOGLE_SHEETS_WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+      } catch (err) {
+        console.warn("Koneksi pengiriman sheet fallback:", err);
+      }
+    }
+
+    function generateStudentReportText(payload) {
+      const b = payload.breakdown;
+      return `*REKAP NILAI STS KODING & AI* 🤖
+------------------------------------
+👤 *Nama Siswa:* ${payload.studentName}
+🏫 *Kelas/Absen:* ${payload.studentClass}
+⏱️ *Durasi:* ${payload.durationMinutes} Menit
+🏆 *TOTAL SKOR:* ${payload.totalScore} / 100
+------------------------------------
+*Rincian Perolehan:*
+1. Soal 1 (Zilong 4 Arah Savage): ${b[0] ? b[0].score : 0} Poin
+2. Soal 2 (Bintang & Bom): ${b[1] ? b[1].score : 0} Poin
+3. Soal 3 (Sumbu X Kanan/Kiri): ${b[2] ? b[2].score : 0} Poin
+4. Soal 4 (Mobil Hijau & Garis): ${b[3] ? b[3].score : 0} Poin
+5. Soal 5 (Bear Melewati Batu): ${b[4] ? b[4].score : 0} Poin
+
+*Catatan Refleksi Siswa:*
+• Soal 1: ${b[0] ? b[0].reflection : '-'}
+• Soal 2: ${b[1] ? b[1].reflection : '-'}
+• Soal 3: ${b[2] ? b[2].reflection : '-'}
+• Soal 4: ${b[3] ? b[3].reflection : '-'}
+• Soal 5: ${b[4] ? b[4].reflection : '-'}`;
+    }
+
+    function copyReportToClipboard(payload) {
+      const text = generateStudentReportText(payload);
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = text;
+      tempTextArea.style.position = 'fixed';
+      tempTextArea.style.left = '-9999px';
+      document.body.appendChild(tempTextArea);
+      tempTextArea.focus();
+      tempTextArea.select();
+      try {
+        document.execCommand('copy');
+        showStageToast("📋 Rincian nilai berhasil disalin!");
+      } catch (e) {}
+      document.body.removeChild(tempTextArea);
+    }
+
+    function sendReportToWhatsApp(payload) {
+      const text = encodeURIComponent(generateStudentReportText(payload));
+      const targetPhone = TEACHER_WA_NUMBER ? TEACHER_WA_NUMBER.replace(/[^0-9]/g, '') : "";
+      const waUrl = targetPhone ? `https://wa.me/${targetPhone}?text=${text}` : `https://api.whatsapp.com/send?text=${text}`;
+      window.open(waUrl, '_blank');
+    }
+
+    function handleTimeExpiredAutoSubmit() {
+      if (isExamFinished) return;
+      isExamFinished = true;
+      audio.playError();
+
+      const { totalScore, breakdown } = calculateFinalExamScore();
+      const submissionPayload = {
+        timestamp: new Date().toISOString(),
+        studentName: studentProfile.name || "Anonim",
+        studentClass: studentProfile.classNum || "-",
+        totalScore: totalScore,
+        durationMinutes: 60,
+        isAutoSubmitted: true,
+        breakdown: breakdown
+      };
+
+      sendExamResultsToGoogleSheets(submissionPayload);
+
+      // Tampilkan modal waktu habis
+      const modal = document.createElement('div');
+      modal.className = "fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in";
+      modal.innerHTML = `
+        <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-rose-500 max-w-lg w-full rounded-3xl p-6 text-center shadow-2xl text-slate-100 flex flex-col items-center">
+          <div class="text-5xl mb-2">⏱️🔔</div>
+          <h2 class="text-2xl font-brand font-bold text-rose-400 mb-1">Waktu Ujian Telah Habis!</h2>
+          <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+            Waktu 60 menit telah selesai. Seluruh jawaban yang telah kamu kerjakan telah <strong>otomatis tersimpan</strong> dan dikirim ke sistem guru.
+          </p>
+
+          <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 w-full mb-4">
+            <span class="text-xs text-slate-400 font-bold block mb-1">Skor Akhir Kamu:</span>
+            <span class="text-4xl font-brand font-black text-amber-400">${totalScore}</span>
+            <span class="text-xs text-slate-400 font-bold"> / 100</span>
+          </div>
+
+          <button onclick="this.closest('.fixed').remove()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-brand font-bold text-xs rounded-xl shadow-lg transition">
+            Tutup & Selesai
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    function handleNextChallengeAction() {
+      const nextBtn = document.getElementById('btn-next-challenge');
+      if (!nextBtn || nextBtn.disabled) return;
+
+      audio.playVictory();
+      try {
+        confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
+      } catch(e) {}
+
+      questionCompleted[currentQuestionIndex] = true;
+      if (currentQuestionIndex === 0) {
+        const badge = document.getElementById('badgeCheckQ1');
+        if (badge) badge.classList.remove('hidden');
+        switchQuestion(1);
+      } else if (currentQuestionIndex === 1) {
+        const badge = document.getElementById('badgeCheckQ2');
+        if (badge) badge.classList.remove('hidden');
+        switchQuestion(2);
+      } else if (currentQuestionIndex === 2) {
+        const badge = document.getElementById('badgeCheckQ3');
+        if (badge) badge.classList.remove('hidden');
+        switchQuestion(3);
+      } else if (currentQuestionIndex === 3) {
+        const badge = document.getElementById('badgeCheckQ4');
+        if (badge) badge.classList.remove('hidden');
+        switchQuestion(4);
+      } else {
+        // FINAL SUBMISSION ACTION FOR QUESTION 5
+        const badge = document.getElementById('badgeCheckQ5');
+        if (badge) badge.classList.remove('hidden');
+
+        isExamFinished = true;
+        if (examTimerInterval) clearInterval(examTimerInterval);
+
+        const { totalScore, breakdown } = calculateFinalExamScore();
+        const elapsedMins = Math.round((EXAM_DURATION_SECONDS - examTimeRemaining) / 60);
+
+        const submissionPayload = {
+          timestamp: new Date().toISOString(),
+          studentName: studentProfile.name || "Anonim",
+          studentClass: studentProfile.classNum || "-",
+          totalScore: totalScore,
+          durationMinutes: elapsedMins,
+          isAutoSubmitted: false,
+          breakdown: breakdown
+        };
+
+        sendExamResultsToGoogleSheets(submissionPayload);
+
+        // Friendly Children's Celebration Modal
+        const modal = document.createElement('div');
+        modal.className = "fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in";
+        modal.innerHTML = `
+          <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400 max-w-lg w-full rounded-3xl p-6 text-center shadow-2xl text-slate-100 flex flex-col items-center relative overflow-hidden">
+            <div class="text-6xl mb-2 animate-bounce">🏆🌟🎉</div>
+            <h2 class="text-2xl font-brand font-bold text-amber-300 mb-1">Hebat Sekali, Detektif Cilik!</h2>
+            <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+              Selamat <strong>${studentProfile.name} (${studentProfile.classNum})</strong>! Kamu berhasil menyelesaikan semua tantangan PictoBlox dan jawabanmu sudah berhasil direkam! 🚀✨
+            </p>
+
+            <div class="grid grid-cols-2 gap-2.5 w-full my-3">
+              <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700">
+                <span class="text-[11px] text-slate-400 font-bold block mb-1">Skor Akhir Kamu</span>
+                <span class="text-3xl font-brand font-black text-amber-400">${totalScore}</span>
+                <span class="text-xs text-slate-400 font-bold"> / 100</span>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700">
+                <span class="text-[11px] text-slate-400 font-bold block mb-1">Waktu Selesai</span>
+                <span class="text-2xl font-brand font-black text-emerald-400">${elapsedMins}</span>
+                <span class="text-xs text-slate-400 font-bold"> Menit</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/60 w-full text-left text-[11px] space-y-1 mb-3">
+              <span class="font-bold text-sky-300 block mb-0.5">Ringkasan Misimu:</span>
+              <div class="flex justify-between text-slate-300">
+                <span>Soal 1 (Zilong 4 Arah Savage):</span>
+                <span class="font-mono font-bold ${breakdown[0].codeValid ? 'text-emerald-400' : 'text-rose-400'}">${breakdown[0].score} Poin</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Soal 2 (Bintang & Bom):</span>
+                <span class="font-mono font-bold ${breakdown[1].codeValid ? 'text-emerald-400' : 'text-rose-400'}">${breakdown[1].score} Poin</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Soal 3 (Sumbu X Kanan/Kiri):</span>
+                <span class="font-mono font-bold ${breakdown[2].codeValid ? 'text-emerald-400' : 'text-rose-400'}">${breakdown[2].score} Poin</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Soal 4 (Mobil Hijau & Garis Merah):</span>
+                <span class="font-mono font-bold ${breakdown[3].codeValid ? 'text-emerald-400' : 'text-rose-400'}">${breakdown[3].score} Poin</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Soal 5 (Bear Melewati Rintangan):</span>
+                <span class="font-mono font-bold ${breakdown[4].codeValid ? 'text-emerald-400' : 'text-rose-400'}">${breakdown[4].score} Poin</span>
+              </div>
+            </div>
+
+            <!-- Tombol Pengiriman Tambahan (WhatsApp & Salin) -->
+            <div class="grid grid-cols-2 gap-2 w-full mb-3">
+              <button id="btnSendWa" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-brand font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 active:scale-95">
+                <span>📲</span> <span>Kirim ke WA Guru</span>
+              </button>
+              <button id="btnCopyReport" class="py-2.5 px-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-brand font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 active:scale-95">
+                <span>📋</span> <span>Salin Rincian Nilai</span>
+              </button>
+            </div>
+
+            <button onclick="this.closest('.fixed').remove()" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-white font-brand font-bold text-xs rounded-xl shadow-lg transition active:scale-95">
+              Selesai & Tutup Ujian ✨
+            </button>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('btnSendWa').addEventListener('click', () => sendReportToWhatsApp(submissionPayload));
+        document.getElementById('btnCopyReport').addEventListener('click', () => copyReportToClipboard(submissionPayload));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const expInput = document.getElementById('studentExplanationInput');
+      if (expInput) {
+        expInput.addEventListener('input', checkProgressionGate);
+      }
+      const caseDesc = document.getElementById('caseDescription');
+      if (caseDesc) {
+        caseDesc.innerHTML = QUESTIONS_DATA[0].description;
+      }
+
+      // Bind all movement buttons to touch and mouse engine
+      bindDirectionButton('btnTouchLeft', -1, 0);
+      bindDirectionButton('btnTouchRight', 1, 0);
+      bindDirectionButton('btnDPadUp', 0, 1);
+      bindDirectionButton('btnDPadDown', 0, -1);
+      bindDirectionButton('btnDPadLeft', -1, 0);
+      bindDirectionButton('btnDPadRight', 1, 0);
+
+      renderPalette();
+      renderWorkspaceScript();
+      renderStaticStage();
+    });
+  </script>
+</body>
+</html>
+```
